@@ -3,208 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Денис Волошин | PM Sim-Profile</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>Gamer CV :: The Quest</title>
     <style>
-        /* --- СТИЛИ (CSS) --- */
-        :root {
-            --sims-green: #32cd32;
-            --sims-blue: #00a0ff;
-            --sims-white: rgba(255, 255, 255, 0.95);
-            --text: #1d1d1f;
-        }
+        /* Подключаем ретро-шрифт (опционально, если есть интернет) */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            background-color: #000;
-        }
-
-        /* Твой крутой AI-аватар на фоне (размыт) */
-        #bg-image {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-image: url('image_2.png'); /* ТВОЙ АВАТАР */
-            background-size: cover;
-            background-position: center;
-            filter: blur(8px) brightness(0.6);
-            z-index: -1;
-            transform: scale(1.1);
-        }
-
-        #ui-layer {
-            position: relative;
-            width: 100%; height: 100%;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #000; /* Черный фон вокруг игры */
+            color: #fff;
+            font-family: 'Press Start 2P', cursive; /* Пиксельный шрифт */
+            height: 100vh;
+            overflow: hidden; /* Убираем скролл браузера */
             display: flex;
-            justify-content: center;
             align-items: center;
-            perspective: 1000px; /* Глубина для слежения */
+            justify-content: center;
         }
 
-        /* Центр: Портрет */
-        #sim-portrait {
-            width: 380px; height: 380px;
-            background-image: url('image_2.png'); /* ТВОЙ АВАТАР */
-            background-size: cover;
-            background-position: center;
-            border-radius: 50%;
-            border: 6px solid var(--sims-green);
-            box-shadow: 0 0 50px rgba(50, 205, 50, 0.4);
+        #game-container {
             position: relative;
-            z-index: 10;
-            cursor: pointer;
-            
-            /* Эффект слежения за курсором */
-            transform-style: preserve-3d;
-            transition: transform 0.1s ease-out;
-            will-change: transform;
+            border: 4px solid #fff; /* Рамка игрового окна */
+            box-shadow: 0 20px 50px rgba(0,255,255, 0.3); /* Неоновое свечение */
         }
 
-        /* Тот самый Пламбоб */
-        #plumbob {
+        canvas {
+            display: block;
+            background: #0d1117; /* Фон внутри игры (темно-синий) */
+        }
+
+        /* Оверлей управления для мобилок */
+        #controls {
             position: absolute;
-            top: -90px; left: 50%;
-            transform: translateX(-50%) translateZ(20px); /* Выносим вперед */
-            width: 45px; height: 75px;
-            background: var(--sims-green);
-            clip-path: polygon(50% 0%, 100% 30%, 100% 70%, 50% 100%, 0% 70%, 0% 30%);
-            animation: rotatePlumbob 3s infinite linear, float 2s infinite ease-in-out;
-            box-shadow: 0 0 25px rgba(50, 205, 50, 0.8);
+            bottom: 20px;
+            left: 20px;
+            display: none; /* Скрыт по умолчанию на десктопе */
+            gap: 10px;
         }
-
-        /* Информационные облака (Sims Style) */
-        .thought-bubble {
-            position: absolute;
-            background: var(--sims-white);
-            padding: 20px;
-            border-radius: 25px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-            width: 280px;
-            border: 3px solid var(--sims-blue);
-            cursor: help; /* Иконка помощи при наведении */
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        .btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid #fff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            user-select: none;
         }
-
-        .thought-bubble:hover {
-            transform: scale(1.05);
-            box-shadow: 0 20px 45px rgba(0,123,255,0.4);
-        }
-
-        /* Хвостики для облаков мыслей */
-        .thought-bubble::after {
-            content: '';
-            position: absolute;
-            width: 20px; height: 20px;
-            background: var(--sims-white);
-            border-radius: 50%;
-            border: 3px solid var(--sims-blue);
-        }
-
-        h2 { font-size: 16px; color: var(--sims-blue); margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
-        .artist-list { font-size: 13px; line-height: 1.6; font-weight: 600; }
-        .progress-container { background: #eee; height: 12px; border-radius: 6px; margin: 8px 0; overflow: hidden; }
-        .progress-bar { height: 100%; background: var(--sims-green); border-radius: 6px; width: 0; transition: width 1s ease; }
-
-        /* Позиции блоков */
-        #clients { top: 15%; left: 8%; }
-        #clients::after { bottom: -30px; right: 20px; width: 15px; height: 15px; }
-
-        #skills { top: 15%; right: 8%; }
-        #skills::after { bottom: -30px; left: 20px; width: 15px; height: 15px; }
-
-        #risk { bottom: 15%; right: 8%; }
-        #risk::after { top: -30px; left: 20px; width: 15px; height: 15px; }
-
-        #geo { bottom: 15%; left: 8%; }
-        #geo::after { top: -30px; right: 20px; width: 15px; height: 15px; }
-
-        /* Анимации */
-        @keyframes float { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -15px); } }
-        @keyframes rotatePlumbob { 0% { filter: hue-rotate(0deg); } 100% { filter: hue-rotate(20deg); } }
-
     </style>
 </head>
 <body>
 
-<div id="bg-image"></div>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div style="position: absolute; top: 10px; left: 10px; font-size: 10px; color: rgba(255,255,255,0.5);">
+            Use [←][→] to move, [Space] to jump
+        </div>
 
-<audio id="simlish-audio" src="simlish_murmur.mp3" preload="auto"></audio>
-
-<div id="ui-layer">
-    <div id="sim-portrait">
-        <div id="plumbob"></div>
-    </div>
-
-    <div id="clients" class="thought-bubble" onmouseover="playSimlish()">
-        <h2>⭐ Известность</h2>
-        <div class="artist-list">
-            MACAN, ЕГОР КРИД, БАСТА, ПОЛИНА ГАГАРИНА, SALUKI, ТРИ ДНЯ ДОЖДЯ, 13 КАРАТ, ПАПИН ОЛИМПОС
+        <div id="controls">
+            <div class="btn" id="left-btn">←</div>
+            <div class="btn" id="jump-btn">↑</div>
+            <div class="btn" id="right-btn">→</div>
         </div>
     </div>
 
-    <div id="skills" class="thought-bubble" onmouseover="playSimlish()">
-        <h2>🤖 AI Интеграция</h2>
-        <p>Навык: Промпт-инжиниринг</p>
-        <div class="progress-container"><div class="progress-bar" style="width: 95%;"></div></div>
-        <p style="font-size: 11px;">Автоматизация процессов и аналитика.</p>
-    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('ctx');
 
-    <div id="risk" class="thought-bubble" onmouseover="playSimlish()">
-        <h2>🛡️ Самочувствие</h2>
-        <p>Статус: <b>Спокоен в шторме</b></p>
-        <div class="progress-container"><div class="progress-bar" style="width: 100%;"></div></div>
-        <p style="font-size: 11px;">Кейс "Аэропорт": Успешно решен.</p>
-    </div>
+        // Размеры игрового окна (фиксированные для стабильности)
+        canvas.width = 1000;
+        canvas.height = 600;
 
-    <div id="geo" class="thought-bubble" onmouseover="playSimlish()">
-        <h2>📈 Достижения</h2>
-        <p>Тур-карта: 36+ городов</p>
-        <p style="font-size: 11px;">Население 500k+. Все шоу завершены на 100%.</p>
-    </div>
-</div>
+        // --- ДАННЫЕ РЕЗЮМЕ (Изменяй здесь!) ---
+        const resumeData = {
+            name: "ТВОЕ ИМЯ",
+            title: "LEVEL 1: FRONTEND DEVELOPER",
+            sections: [
+                { title: "STARTING ZONE", text: "Родился, учился, нашел клавиатуру." },
+                { title: "SKILLS OBTAINED", text: "[HTML][CSS][JS][React][Git][NoobsPwned]" },
+                { title: "EXPERIENCE MAP", text: "2021-2023: Studio X (Junior) // 2023-Now: Freelance (Mage)" },
+                { title: "CONTACT BOSS", text: "Email: ghost@cv.com // GitHub: /ghost" }
+            ]
+        };
 
-<script>
-    // --- ЛОГИКА (JS) ---
+        // --- ИГРОВЫЕ ПЕРЕМЕННЫЕ ---
+        let gravity = 0.8;
+        let friction = 0.9;
+        let gameFrame = 0;
 
-    const portrait = document.getElementById('sim-portrait');
-    const simlishAudio = document.getElementById('simlish-audio');
+        // Управление
+        const keys = { right: false, left: false, up: false };
 
-    // 1. Эффект "Слежения за курсором"
-    document.addEventListener('mousemove', (e) => {
-        const { clientX, clientY } = e;
-        
-        // Находим центр портрета
-        const rect = portrait.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
+        // Игрок
+        const player = {
+            x: 100,
+            y: canvas.height - 100,
+            width: 32,
+            height: 48,
+            speed: 5,
+            velX: 0,
+            velY: 0,
+            jumping: false,
+            color: '#00ffff' // Неоновый голубой
+        };
 
-        // Вычисляем дистанцию от курсора до центра
-        const posX = clientX - centerX;
-        const posY = clientY - centerY;
-
-        // Ограничиваем наклон (макс 12 градусов для реализма)
-        const rotateX = Math.max(-12, Math.min(12, -posY / 30)); // Делитель 30 для плавности
-        const rotateY = Math.max(-12, Math.min(12, posX / 30));
-
-        // Применяем 3D-трансформацию
-        portrait.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-    });
-
-    // 2. Звук Бормотания (Simlish) при наведении
-    function playSimlish() {
-        // Сбрасываем звук в начало, чтобы он играл каждый раз при наведении
-        simlishAudio.currentTime = 0;
-        // Воспроизводим, только если браузер разрешает
-        simlishAudio.play().catch(e => console.log("Sound blocked by browser. Need interaction."));
-    }
-
-    // Восстанавливаем дефолтное положение, если курсор ушел с экрана
-    document.addEventListener('mouseleave', () => {
-        portrait.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg)`;
-    });
-
-</script>
-
-</body>
-</html>
+        // Мир (Платформы)
+        const platforms = [
+            // Пол
+            { x: 0, y: canvas.height - 20, width: canvas.width * 2, height: 20, color: '#333' },
+            // Зона 1
+            { x: 300, y: 500, width: 200, height: 20, color: '#ff0055' },
+            // Зона 2
+            { x: 600, y: 400, width: 200, height:
