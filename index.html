@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Denis Voloshin | PM Terminal</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #c9d1d9;
+            --prompt-color: #2ea043;
+            --cmd-color: #58a6ff;
+            --highlight: #aff5b4;
+            --error: #f85149;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Consolas', 'Monaco', monospace;
+            overflow: hidden;
+        }
+
+        #terminal {
+            padding: 25px;
+            height: calc(100% - 50px);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .line { margin-bottom: 10px; line-height: 1.5; white-space: pre-wrap; }
+        .command-line { color: var(--cmd-color); font-weight: bold; }
+        .prompt { color: var(--prompt-color); }
+        .highlight { color: var(--highlight); }
+        .error { color: var(--error); }
+
+        #input-area { display: flex; align-items: center; margin-top: 10px; }
+        #cmd-input {
+            background: transparent; border: none; color: var(--text-color);
+            font-family: inherit; font-size: 16px; width: 100%; outline: none;
+        }
+
+        /* Кастомный скролл */
+        #terminal::-webkit-scrollbar { width: 6px; }
+        #terminal::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="terminal">
+    <div id="output"></div>
+    <div id="input-area">
+        <span class="prompt">denis@core:~$&nbsp;</span>
+        <input type="text" id="cmd-input" autofocus spellcheck="false" autocomplete="off">
+    </div>
+</div>
+
+<script>
+    const output = document.getElementById('output');
+    const input = document.getElementById('cmd-input');
+    const terminal = document.getElementById('terminal');
+
+    const db = {
+        "help": "Доступные команды: \n - <span class='highlight'>about</span>: Кто я и мой подход \n - <span class='highlight'>skills</span>: AI & Технический стек \n - <span class='highlight'>projects</span>: Артисты (Баста, Макан, Салуки...) \n - <span class='highlight'>risk</span>: Кейс 'Аэропорт' \n - <span class='highlight'>tour_map</span>: География (36+ городов) \n - <span class='highlight'>clear</span>: Очистить экран",
+        
+        "about": "Я — <span class='highlight'>Project Manager</span>. \nСпециализация: Синхронизация хаоса в стадионных турах и адаптация этих процессов под IT-задачи.",
+        
+        "skills": "<span class='highlight'>[AI Integration]</span>: ChatGPT/Gemini для автоматизации и анализа.\n<span class='highlight'>[Technical]</span>: HTML5, CSS3, Vanilla JavaScript, Figma.\n<span class='highlight'>[Management]</span>: Crisis Management, P&L, Agile.",
+        
+        "projects": "Менеджмент и координация для: \n<span class='highlight'>МАКАН, ЕГОР КРИД, БАСТА, ПОЛИНА ГАГАРИНА, САЛУКИ, ТРИ ДНЯ ДОЖДЯ, 13 КАРАТ, ПАПИН ОЛИМПОС.</span>",
+        
+        "risk": "<span class='error'>[CRITICAL LOG]</span>: Артист без паспорта в аэропорту. \n<span class='highlight'>Решение:</span> 40 минут переговоров с Аэрофлотом. \n<span class='highlight'>Результат:</span> Вылет разрешен. Тур продолжается.",
+        
+        "tour_map": "География: <span class='highlight'>36+ городов</span> с населением 500k+.\nМосква, СПб, Казань, Екб, Новосибирск, Краснодар и др. \n[Статус: Все площадки успешно отработаны]"
+    };
+
+    async function typeText(text, element) {
+        const div = document.createElement('div');
+        div.className = 'line';
+        element.appendChild(div);
+        
+        // Быстрый хак для рендеринга HTML тегов внутри печати
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = text;
+        const nodes = Array.from(tempDiv.childNodes);
+
+        for (let node of nodes) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                for (let char of node.textContent) {
+                    div.innerHTML += char;
+                    terminal.scrollTop = terminal.scrollHeight;
+                    await new Promise(r => setTimeout(r, 10)); // Скорость печати
+                }
+            } else {
+                div.innerHTML += node.outerHTML;
+            }
+        }
+    }
+
+    input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+            const cmd = input.value.toLowerCase().trim();
+            const val = input.value;
+            input.value = '';
+
+            const cmdLine = document.createElement('div');
+            cmdLine.className = 'line command-line';
+            cmdLine.innerHTML = `<span class="prompt">denis@core:~$&nbsp;</span>${val}`;
+            output.appendChild(cmdLine);
+
+            if (cmd === 'clear') {
+                output.innerHTML = '';
+            } else if (db[cmd]) {
+                await typeText(db[cmd], output);
+            } else if (cmd !== '') {
+                await typeText(`<span class="error">Command not found: ${cmd}</span>. Type 'help'.`, output);
+            }
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+    });
+
+    // Начальное приветствие
+    typeText("Denis Voloshin OS v1.0.0. Type 'help' to begin...", output);
+</script>
+</body>
+</html>
