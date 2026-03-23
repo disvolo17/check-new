@@ -2,119 +2,150 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gamer CV :: The Quest</title>
+    <title>Pixel Resume Game</title>
     <style>
-        /* Подключаем ретро-шрифт (опционально, если есть интернет) */
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            background: #000; /* Черный фон вокруг игры */
-            color: #fff;
-            font-family: 'Press Start 2P', cursive; /* Пиксельный шрифт */
-            height: 100vh;
-            overflow: hidden; /* Убираем скролл браузера */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #game-container {
-            position: relative;
-            border: 4px solid #fff; /* Рамка игрового окна */
-            box-shadow: 0 20px 50px rgba(0,255,255, 0.3); /* Неоновое свечение */
-        }
-
-        canvas {
-            display: block;
-            background: #0d1117; /* Фон внутри игры (темно-синий) */
-        }
-
-        /* Оверлей управления для мобилок */
-        #controls {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            display: none; /* Скрыт по умолчанию на десктопе */
-            gap: 10px;
-        }
-        .btn {
-            width: 60px;
-            height: 60px;
-            background: rgba(255,255,255,0.2);
-            border: 2px solid #fff;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            user-select: none;
-        }
+        body { margin: 0; background: #222; font-family: 'Courier New', Courier, monospace; overflow: hidden; color: white; }
+        canvas { display: block; background: #3a5a3a; margin: 0 auto; image-rendering: pixelated; }
+        #ui { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); 
+              background: rgba(0,0,0,0.8); padding: 20px; border: 4px solid #fff; 
+              width: 80%; max-width: 600px; display: none; }
+        .instructions { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 10px; font-size: 14px; }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <canvas id="gameCanvas"></canvas>
+<div class="instructions">Управление: СТРЕЛКИ / WASD. Взаимодействие: ПРОБЕЛ</div>
+<div id="ui">
+    <div id="ui-title" style="font-weight: bold; color: #ff0; margin-bottom: 10px;"></div>
+    <div id="ui-content"></div>
+    <div style="font-size: 10px; margin-top: 10px; color: #aaa;">Нажмите Пробел, чтобы закрыть</div>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<script>
+/** * ДАННЫЕ ВАШЕГО РЕЗЮМЕ 
+ * (Замените текст ниже на свой с сайта disvolo17.github.io/work/)
+ */
+const RESUME_DATA = {
+    intro: {
+        title: "КТО Я?",
+        text: "Привет! Я [Ваше Имя]. Разработчик и творец. Добро пожаловать в мой мир!"
+    },
+    skills: {
+        title: "НАВЫКИ (SKILLS)",
+        text: "• Frontend: React, Vue, HTML/CSS\n• Backend: Node.js, Python\n• Tools: Git, Docker, Figma"
+    },
+    experience: {
+        title: "ОПЫТ РАБОТЫ",
+        text: "2022 - н.в.: Senior Developer в 'Super Company'\n2020 - 2022: Junior в 'StartUp Inc'"
+    },
+    contacts: {
+        title: "КОНТАКТЫ",
+        text: "GitHub: disvolo17\nEmail: your@email.com\nTelegram: @yourname"
+    }
+};
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const ui = document.getElementById('ui');
+const uiTitle = document.getElementById('ui-title');
+const uiContent = document.getElementById('ui-content');
+
+canvas.width = 800;
+canvas.height = 600;
+
+const player = { x: 400, y: 300, size: 32, speed: 4, color: '#00ff00' };
+const keys = {};
+let activeDialog = null;
+
+// Объекты на карте (NPC/Зоны)
+const points = [
+    { x: 150, y: 150, size: 40, color: '#ff5555', label: 'ОБО МНЕ', data: RESUME_DATA.intro },
+    { x: 600, y: 150, size: 40, color: '#5555ff', label: 'НАВЫКИ', data: RESUME_DATA.skills },
+    { x: 150, y: 450, size: 40, color: '#ffff55', label: 'ОПЫТ', data: RESUME_DATA.experience },
+    { x: 600, y: 450, size: 40, color: '#ff55ff', label: 'СВЯЗЬ', data: RESUME_DATA.contacts },
+];
+
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'Space') handleInteraction();
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+function handleInteraction() {
+    if (activeDialog) {
+        activeDialog = null;
+        ui.style.display = 'none';
+        return;
+    }
+    
+    points.forEach(p => {
+        const dist = Math.hypot(player.x - p.x, player.y - p.y);
+        if (dist < 60) {
+            activeDialog = p.data;
+            uiTitle.innerText = p.data.title;
+            uiContent.innerText = p.data.text;
+            ui.style.display = 'block';
+        }
+    });
+}
+
+function update() {
+    if (activeDialog) return;
+
+    if (keys['ArrowUp'] || keys['KeyW']) player.y -= player.speed;
+    if (keys['ArrowDown'] || keys['KeyS']) player.y += player.speed;
+    if (keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
+    if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
+
+    // Границы
+    player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
+    player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Рисуем сетку (для стиля)
+    ctx.strokeStyle = '#446644';
+    for(let i=0; i<canvas.width; i+=40) {
+        ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke();
+    }
+    for(let i=0; i<canvas.height; i+=40) {
+        ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke();
+    }
+
+    // Рисуем точки интереса
+    points.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
+        ctx.fillStyle = 'white';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.label, p.x, p.y - 30);
         
-        <div style="position: absolute; top: 10px; left: 10px; font-size: 10px; color: rgba(255,255,255,0.5);">
-            Use [←][→] to move, [Space] to jump
-        </div>
+        // Подсказка "Нажми пробел"
+        const dist = Math.hypot(player.x - p.x, player.y - p.y);
+        if (dist < 60) {
+            ctx.fillText("[ПРОБЕЛ]", p.x, p.y + 40);
+        }
+    });
 
-        <div id="controls">
-            <div class="btn" id="left-btn">←</div>
-            <div class="btn" id="jump-btn">↑</div>
-            <div class="btn" id="right-btn">→</div>
-        </div>
-    </div>
+    // Рисуем игрока (пиксельный человечек)
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+    ctx.fillStyle = 'black';
+    ctx.fillRect(player.x + 6, player.y + 8, 6, 6); // Глаза
+    ctx.fillRect(player.x + 20, player.y + 8, 6, 6);
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('ctx');
+    requestAnimationFrame(() => {
+        update();
+        draw();
+    });
+}
 
-        // Размеры игрового окна (фиксированные для стабильности)
-        canvas.width = 1000;
-        canvas.height = 600;
-
-        // --- ДАННЫЕ РЕЗЮМЕ (Изменяй здесь!) ---
-        const resumeData = {
-            name: "ТВОЕ ИМЯ",
-            title: "LEVEL 1: FRONTEND DEVELOPER",
-            sections: [
-                { title: "STARTING ZONE", text: "Родился, учился, нашел клавиатуру." },
-                { title: "SKILLS OBTAINED", text: "[HTML][CSS][JS][React][Git][NoobsPwned]" },
-                { title: "EXPERIENCE MAP", text: "2021-2023: Studio X (Junior) // 2023-Now: Freelance (Mage)" },
-                { title: "CONTACT BOSS", text: "Email: ghost@cv.com // GitHub: /ghost" }
-            ]
-        };
-
-        // --- ИГРОВЫЕ ПЕРЕМЕННЫЕ ---
-        let gravity = 0.8;
-        let friction = 0.9;
-        let gameFrame = 0;
-
-        // Управление
-        const keys = { right: false, left: false, up: false };
-
-        // Игрок
-        const player = {
-            x: 100,
-            y: canvas.height - 100,
-            width: 32,
-            height: 48,
-            speed: 5,
-            velX: 0,
-            velY: 0,
-            jumping: false,
-            color: '#00ffff' // Неоновый голубой
-        };
-
-        // Мир (Платформы)
-        const platforms = [
-            // Пол
-            { x: 0, y: canvas.height - 20, width: canvas.width * 2, height: 20, color: '#333' },
-            // Зона 1
-            { x: 300, y: 500, width: 200, height: 20, color: '#ff0055' },
-            // Зона 2
-            { x: 600, y: 400, width: 200, height:
+draw();
+</script>
+</body>
+</html>
