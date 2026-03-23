@@ -3,126 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Denis Voloshin | PM Terminal</title>
+    <title>Денис Волошин | PM Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0d1117;
-            --text-color: #c9d1d9;
-            --prompt-color: #2ea043;
-            --cmd-color: #58a6ff;
-            --highlight: #aff5b4;
-            --error: #f85149;
+            --bg: #f5f5f7;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --text: #1d1d1f;
+            --accent: #0071e3;
+            --secondary: #86868b;
         }
 
-        body, html {
-            margin: 0; padding: 0; height: 100%;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Consolas', 'Monaco', monospace;
-            overflow: hidden;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0; padding: 0;
+            line-height: 1.5;
         }
 
-        #terminal {
-            padding: 25px;
-            height: calc(100% - 50px);
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 20px;
         }
 
-        .line { margin-bottom: 10px; line-height: 1.5; white-space: pre-wrap; }
-        .command-line { color: var(--cmd-color); font-weight: bold; }
-        .prompt { color: var(--prompt-color); }
-        .highlight { color: var(--highlight); }
-        .error { color: var(--error); }
-
-        #input-area { display: flex; align-items: center; margin-top: 10px; }
-        #cmd-input {
-            background: transparent; border: none; color: var(--text-color);
-            font-family: inherit; font-size: 16px; width: 100%; outline: none;
+        header {
+            margin-bottom: 60px;
+            text-align: center;
         }
 
-        /* Кастомный скролл */
-        #terminal::-webkit-scrollbar { width: 6px; }
-        #terminal::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+        h1 { font-size: 48px; font-weight: 800; margin-bottom: 10px; letter-spacing: -1px; }
+        .subtitle { font-size: 20px; color: var(--secondary); font-weight: 400; }
+
+        /* Сетка показателей */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(0,0,0,0.05);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-num { display: block; font-size: 32px; font-weight: 800; color: var(--accent); }
+        .stat-desc { font-size: 14px; color: var(--secondary); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Основной контент */
+        .main-card {
+            background: #fff;
+            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            margin-bottom: 30px;
+        }
+
+        h2 { font-size: 28px; font-weight: 700; margin-top: 0; }
+
+        .tags { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+        .tag {
+            background: #f0f0f2;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #424245;
+        }
+
+        .tag.ai { background: var(--accent); color: #fff; }
+
+        .case-study {
+            border-left: 4px solid var(--accent);
+            padding-left: 20px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            text-align: center;
+            color: var(--secondary);
+            font-size: 14px;
+            margin-top: 60px;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 32px; }
+            .main-card { padding: 25px; }
+        }
     </style>
 </head>
 <body>
 
-<div id="terminal">
-    <div id="output"></div>
-    <div id="input-area">
-        <span class="prompt">denis@core:~$&nbsp;</span>
-        <input type="text" id="cmd-input" autofocus spellcheck="false" autocomplete="off">
+<div class="container">
+    <header>
+        <h1>Денис Волошин</h1>
+        <p class="subtitle">Project Manager & AI Integrator</p>
+        <div class="tags" style="justify-content: center;">
+            <span class="tag ai">Advanced AI Prompting</span>
+            <span class="tag">HTML/CSS/JS</span>
+            <span class="tag">Crisis Management</span>
+            <span class="tag">Event Production</span>
+        </div>
+    </header>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="stat-num">36+</span>
+            <span class="stat-desc">Городов в турах</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-num">500k+</span>
+            <span class="stat-desc">Охват аудитории</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-num">100%</span>
+            <span class="stat-desc">Успешных релизов</span>
+        </div>
+    </div>
+
+    <div class="main-card">
+        <h2>🚀 Ключевой кейс: Risk Management</h2>
+        <div class="case-study">
+            <p><strong>Проблема:</strong> Артист прибыл в аэропорт без паспорта за час до вылета в тур.</p>
+            <p><strong>Действие:</strong> Проведение 40-минутных переговоров с руководством авиакомпании, внедрение альтернативного протокола верификации личности в обход стандартных процедур.</p>
+            <p><strong>Результат:</strong> Тур не сорван, финансовые потери предотвращены. Группа вылетела в полном составе.</p>
+        </div>
+        <p style="color: var(--secondary); font-style: italic;">Этот опыт масштабируется на IT: умею находить выход в критических ситуациях, когда стандартные методы (бэкапы/инструкции) не работают.</p>
+    </div>
+
+    <div class="main-card">
+        <h2>⭐ С кем я работал</h2>
+        <p>Управление полным циклом продакшена и логистики для топ-артистов:</p>
+        <div class="tags">
+            <span class="tag">МАКАН</span> <span class="tag">БАСТА</span> <span class="tag">САЛУКИ</span> 
+            <span class="tag">ЕГОР КРИД</span> <span class="tag">ПОЛИНА ГАГАРИНА</span> 
+            <span class="tag">ТРИ ДНЯ ДОЖДЯ</span> <span class="tag">13 КАРАТ</span>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Готов к сложным вызовам. Связаться можно через GitHub или Telegram.</p>
     </div>
 </div>
 
-<script>
-    const output = document.getElementById('output');
-    const input = document.getElementById('cmd-input');
-    const terminal = document.getElementById('terminal');
-
-    const db = {
-        "help": "Доступные команды: \n - <span class='highlight'>about</span>: Кто я и мой подход \n - <span class='highlight'>skills</span>: AI & Технический стек \n - <span class='highlight'>projects</span>: Артисты (Баста, Макан, Салуки...) \n - <span class='highlight'>risk</span>: Кейс 'Аэропорт' \n - <span class='highlight'>tour_map</span>: География (36+ городов) \n - <span class='highlight'>clear</span>: Очистить экран",
-        
-        "about": "Я — <span class='highlight'>Project Manager</span>. \nСпециализация: Синхронизация хаоса в стадионных турах и адаптация этих процессов под IT-задачи.",
-        
-        "skills": "<span class='highlight'>[AI Integration]</span>: ChatGPT/Gemini для автоматизации и анализа.\n<span class='highlight'>[Technical]</span>: HTML5, CSS3, Vanilla JavaScript, Figma.\n<span class='highlight'>[Management]</span>: Crisis Management, P&L, Agile.",
-        
-        "projects": "Менеджмент и координация для: \n<span class='highlight'>МАКАН, ЕГОР КРИД, БАСТА, ПОЛИНА ГАГАРИНА, САЛУКИ, ТРИ ДНЯ ДОЖДЯ, 13 КАРАТ, ПАПИН ОЛИМПОС.</span>",
-        
-        "risk": "<span class='error'>[CRITICAL LOG]</span>: Артист без паспорта в аэропорту. \n<span class='highlight'>Решение:</span> 40 минут переговоров с Аэрофлотом. \n<span class='highlight'>Результат:</span> Вылет разрешен. Тур продолжается.",
-        
-        "tour_map": "География: <span class='highlight'>36+ городов</span> с населением 500k+.\nМосква, СПб, Казань, Екб, Новосибирск, Краснодар и др. \n[Статус: Все площадки успешно отработаны]"
-    };
-
-    async function typeText(text, element) {
-        const div = document.createElement('div');
-        div.className = 'line';
-        element.appendChild(div);
-        
-        // Быстрый хак для рендеринга HTML тегов внутри печати
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = text;
-        const nodes = Array.from(tempDiv.childNodes);
-
-        for (let node of nodes) {
-            if (node.nodeType === Node.TEXT_NODE) {
-                for (let char of node.textContent) {
-                    div.innerHTML += char;
-                    terminal.scrollTop = terminal.scrollHeight;
-                    await new Promise(r => setTimeout(r, 10)); // Скорость печати
-                }
-            } else {
-                div.innerHTML += node.outerHTML;
-            }
-        }
-    }
-
-    input.addEventListener('keydown', async (e) => {
-        if (e.key === 'Enter') {
-            const cmd = input.value.toLowerCase().trim();
-            const val = input.value;
-            input.value = '';
-
-            const cmdLine = document.createElement('div');
-            cmdLine.className = 'line command-line';
-            cmdLine.innerHTML = `<span class="prompt">denis@core:~$&nbsp;</span>${val}`;
-            output.appendChild(cmdLine);
-
-            if (cmd === 'clear') {
-                output.innerHTML = '';
-            } else if (db[cmd]) {
-                await typeText(db[cmd], output);
-            } else if (cmd !== '') {
-                await typeText(`<span class="error">Command not found: ${cmd}</span>. Type 'help'.`, output);
-            }
-            terminal.scrollTop = terminal.scrollHeight;
-        }
-    });
-
-    // Начальное приветствие
-    typeText("Denis Voloshin OS v1.0.0. Type 'help' to begin...", output);
-</script>
 </body>
 </html>
