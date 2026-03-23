@@ -4,45 +4,45 @@
     <meta charset="UTF-8">
     <title>Pixel Resume Game</title>
     <style>
-        body { margin: 0; background: #222; font-family: 'Courier New', Courier, monospace; overflow: hidden; color: white; }
-        canvas { display: block; background: #3a5a3a; margin: 0 auto; image-rendering: pixelated; }
-        #ui { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); 
-              background: rgba(0,0,0,0.8); padding: 20px; border: 4px solid #fff; 
-              width: 80%; max-width: 600px; display: none; }
-        .instructions { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 10px; font-size: 14px; }
+        body { margin: 0; background: #1a1a1a; font-family: 'Courier New', Courier, monospace; overflow: hidden; color: white; }
+        canvas { display: block; background: #2d4c2d; margin: 0 auto; image-rendering: pixelated; border: 5px solid #444; }
+        #ui { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
+              background: #000; padding: 20px; border: 4px solid #fff; 
+              width: 80%; max-width: 600px; display: none; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #ui-title { font-weight: bold; color: #55ff55; margin-bottom: 10px; border-bottom: 1px solid #333; }
+        .hint { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 10px; font-size: 14px; border: 1px solid #555; }
     </style>
 </head>
 <body>
 
-<div class="instructions">Управление: СТРЕЛКИ / WASD. Взаимодействие: ПРОБЕЛ</div>
+<div class="hint">🎮 <b>Управление:</b> WASD или СТРЕЛКИ<br>💬 <b>Взаимодействие:</b> ПРОБЕЛ рядом с объектами</div>
 <div id="ui">
-    <div id="ui-title" style="font-weight: bold; color: #ff0; margin-bottom: 10px;"></div>
-    <div id="ui-content"></div>
-    <div style="font-size: 10px; margin-top: 10px; color: #aaa;">Нажмите Пробел, чтобы закрыть</div>
+    <div id="ui-title"></div>
+    <div id="ui-content" style="white-space: pre-wrap; line-height: 1.4;"></div>
+    <div style="font-size: 11px; margin-top: 15px; color: #777; text-align: right;">[Нажми ПРОБЕЛ, чтобы закрыть]</div>
 </div>
 
 <canvas id="gameCanvas"></canvas>
 
 <script>
-/** * ДАННЫЕ ВАШЕГО РЕЗЮМЕ 
- * (Замените текст ниже на свой с сайта disvolo17.github.io/work/)
+/** * СЮДА ВСТАВЬТЕ СВОИ ДАННЫЕ ВМЕСТО ПРИМЕРОВ:
  */
 const RESUME_DATA = {
     intro: {
-        title: "КТО Я?",
-        text: "Привет! Я [Ваше Имя]. Разработчик и творец. Добро пожаловать в мой мир!"
+        title: "КТО Я? (ОБО МНЕ)",
+        text: "Привет! Я disvolo17. \nЯ создаю цифровые миры и интерфейсы. \nДобро пожаловать в мое резюме-игру!"
     },
     skills: {
-        title: "НАВЫКИ (SKILLS)",
-        text: "• Frontend: React, Vue, HTML/CSS\n• Backend: Node.js, Python\n• Tools: Git, Docker, Figma"
+        title: "МОЙ СТЕК ТЕХНОЛОГИЙ",
+        text: "• Frontend: HTML5, CSS3, JavaScript\n• Frameworks: React, Bootstrap\n• Tools: Git, GitHub Pages, VS Code\n• Graphics: Pixel Art, Figma"
     },
     experience: {
         title: "ОПЫТ РАБОТЫ",
-        text: "2022 - н.в.: Senior Developer в 'Super Company'\n2020 - 2022: Junior в 'StartUp Inc'"
+        text: "— Проект A: Разработка лендингов\n— Проект B: Создание интерактивных карт\n— Фриланс: Помощь в автоматизации процессов"
     },
     contacts: {
-        title: "КОНТАКТЫ",
-        text: "GitHub: disvolo17\nEmail: your@email.com\nTelegram: @yourname"
+        title: "СВЯЗАТЬСЯ СО МНОЙ",
+        text: "GitHub: https://github.com/disvolo17\nСайт: disvolo17.github.io\nEmail: (ваш email здесь)"
     }
 };
 
@@ -55,41 +55,38 @@ const uiContent = document.getElementById('ui-content');
 canvas.width = 800;
 canvas.height = 600;
 
-const player = { x: 400, y: 300, size: 32, speed: 4, color: '#00ff00' };
+const player = { x: 400, y: 300, size: 24, speed: 5, color: '#00ff00' };
 const keys = {};
 let activeDialog = null;
 
-// Объекты на карте (NPC/Зоны)
+// Объекты на карте
 const points = [
-    { x: 150, y: 150, size: 40, color: '#ff5555', label: 'ОБО МНЕ', data: RESUME_DATA.intro },
-    { x: 600, y: 150, size: 40, color: '#5555ff', label: 'НАВЫКИ', data: RESUME_DATA.skills },
-    { x: 150, y: 450, size: 40, color: '#ffff55', label: 'ОПЫТ', data: RESUME_DATA.experience },
-    { x: 600, y: 450, size: 40, color: '#ff55ff', label: 'СВЯЗЬ', data: RESUME_DATA.contacts },
+    { x: 200, y: 150, size: 30, color: '#ff4444', label: 'ПРИВЕТСТВИЕ', data: RESUME_DATA.intro },
+    { x: 600, y: 150, size: 30, color: '#4444ff', label: 'НАВЫКИ', data: RESUME_DATA.skills },
+    { x: 200, y: 450, size: 30, color: '#ffff44', label: 'ОПЫТ', data: RESUME_DATA.experience },
+    { x: 600, y: 450, size: 30, color: '#ff44ff', label: 'КОНТАКТЫ', data: RESUME_DATA.contacts },
 ];
 
 window.addEventListener('keydown', e => {
     keys[e.code] = true;
-    if (e.code === 'Space') handleInteraction();
+    if (e.code === 'Space') {
+        if (activeDialog) {
+            activeDialog = null;
+            ui.style.display = 'none';
+        } else {
+            points.forEach(p => {
+                const dist = Math.hypot(player.x - p.x, player.y - p.y);
+                if (dist < 50) {
+                    activeDialog = p.data;
+                    uiTitle.innerText = p.data.title;
+                    uiContent.innerText = p.data.text;
+                    ui.style.display = 'block';
+                }
+            });
+        }
+    }
 });
 window.addEventListener('keyup', e => keys[e.code] = false);
-
-function handleInteraction() {
-    if (activeDialog) {
-        activeDialog = null;
-        ui.style.display = 'none';
-        return;
-    }
-    
-    points.forEach(p => {
-        const dist = Math.hypot(player.x - p.x, player.y - p.y);
-        if (dist < 60) {
-            activeDialog = p.data;
-            uiTitle.innerText = p.data.title;
-            uiContent.innerText = p.data.text;
-            ui.style.display = 'block';
-        }
-    });
-}
 
 function update() {
     if (activeDialog) return;
@@ -99,7 +96,6 @@ function update() {
     if (keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
     if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
 
-    // Границы
     player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
     player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
 }
@@ -107,8 +103,8 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Рисуем сетку (для стиля)
-    ctx.strokeStyle = '#446644';
+    // Сетка земли
+    ctx.strokeStyle = '#355a35';
     for(let i=0; i<canvas.width; i+=40) {
         ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke();
     }
@@ -116,28 +112,35 @@ function draw() {
         ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke();
     }
 
-    // Рисуем точки интереса
+    // Рисуем интерактивные блоки
     points.forEach(p => {
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - 20, p.y - 20, 40, 40);
-        ctx.fillStyle = 'white';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.label, p.x, p.y - 30);
+        // Тень
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(p.x - 12, p.y + 10, 30, 15);
         
-        // Подсказка "Нажми пробел"
+        // Блок
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - 15, p.y - 15, 30, 30);
+        
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.label, p.x, p.y - 25);
+        
         const dist = Math.hypot(player.x - p.x, player.y - p.y);
-        if (dist < 60) {
-            ctx.fillText("[ПРОБЕЛ]", p.x, p.y + 40);
+        if (dist < 50) {
+            ctx.fillStyle = '#55ff55';
+            ctx.fillText("[ПРОБЕЛ]", p.x, p.y + 35);
         }
     });
 
-    // Рисуем игрока (пиксельный человечек)
+    // Рисуем игрока
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, player.size, player.size);
+    // Лицо
     ctx.fillStyle = 'black';
-    ctx.fillRect(player.x + 6, player.y + 8, 6, 6); // Глаза
-    ctx.fillRect(player.x + 20, player.y + 8, 6, 6);
+    ctx.fillRect(player.x + 4, player.y + 6, 4, 4);
+    ctx.fillRect(player.x + 16, player.y + 6, 4, 4);
 
     requestAnimationFrame(() => {
         update();
