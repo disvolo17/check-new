@@ -3,34 +3,550 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Disvolo17 - Dubai 2026</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Disvolo17 - Premium Interactive CV</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --sky-top: #001a33; /* Глубокий космос */
+            --sky-bottom: #336699; /* Горизонт Дубая */
+            --font-pixel: 'Press Start 2P', cursive;
+        }
+
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #000; overflow: hidden; touch-action: none;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            margin: 0 auto;
+            /* Градиент неба с эффектом свечения */
+            background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bottom) 100%);
+            overflow: hidden;
+            box-shadow: 0 0 100px rgba(0,0,0,0.8);
+        }
+
+        /* CRT Filter Effect (Эффект старого монитора) */
+        #game-wrapper::after {
+            content: " ";
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(rgba(0,0,0,0.05) 0px, rgba(0,0,0,0.05) 1px, transparent 1px, transparent 2px);
+            pointer-events: none; z-index: 100;
+        }
+
+        canvas { display: block; image-rendering: pixelated; }
+
+        /* --- ПРЕМИАЛЬНЫЙ HUD (ИНТЕРФЕЙС) --- */
+        .hud {
+            position: absolute; top: 20px; left: 20px; right: 20px;
+            font-family: var(--font-pixel); color: white; font-size: 10px;
+            text-shadow: 3px 3px 0 #000; pointer-events: none; z-index: 90;
+            display: flex; justify-content: space-between;
+        }
+        .stats-left { line-height: 1.8; }
+        .stats-right { text-align: right; }
+        
+        .glow-text { color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.7), 2px 2px 0 #000; }
+
+        /* --- ДИАЛОГОВЫЕ ОКНА (РЕЗЮМЕ) --- */
+        .resume-dialog {
+            position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+            background: rgba(255,255,255,0.95); border: 6px solid #000; padding: 25px;
+            font-family: var(--font-pixel); font-size: 8px; color: #000;
+            display: none; z-index: 200; text-align: center;
+            max-width: 400px; width: 85%;
+            box-shadow: 15px 15px 0 rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+        }
+        .resume-dialog h2 { margin-top: 0; font-size: 10px; color: #e83030; }
+        .resume-dialog p { line-height: 1.8; margin: 15px 0; }
+        .resume-dialog .close-hint { font-size: 6px; color: #555; }
+
+        /* --- КНОПКИ УПРАВЛЕНИЯ (MOBILE) --- */
+        .controls { position: absolute; bottom: 30px; left: 20px; right: 20px; height: 120px; z-index: 150; }
+        
+        .dpad { position: absolute; left: 0; bottom: 0; width: 120px; height: 120px; }
+        .dpad-btn { position: absolute; background: rgba(220,220,220,0.7); border: 4px solid #000; border-radius: 8px; box-shadow: inset -4px -4px 0 rgba(0,0,0,0.2); }
+        .btn-left { width: 50px; height: 45px; left: 0; top: 37.5px; }
+        .btn-right { width: 50px; height: 45px; right: 0; top: 37.5px; }
+        
+        .action-btns { position: absolute; right: 0; bottom: 0; display: flex; gap: 15px; }
+        .btn-round {
+            width: 70px; height: 70px; border-radius: 50%; border: 6px solid #000;
+            font-family: var(--font-pixel); font-size: 28px; display: flex; 
+            align-items: center; justify-content: center; color: #000;
+            box-shadow: inset -6px -6px 0 rgba(0,0,0,0.3), 0 5px 0 rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
-    <div id="app">
-        <div class="hud">
-            <div class="stats">
-                <p>SCORE: <span id="score">2500</span></p>
-                <p>PROGRESS: 40%</p>
-            </div>
-            <div class="world-info">
-                <p>WORLD: 1-DUBAI</p>
-                <div class="avatar-container"><img id="avatar-img" src="avatar.png" alt=""></div>
-            </div>
+
+<div id="game-wrapper">
+    <div class="hud">
+        <div class="stats-left">
+            <div>NAME: disvolo17</div>
+            <div>STATUS: <span class="glow-text">CREATIVE DEVELOPER</span></div>
+            <div>SCORE: <span id="score-val">002500</span></div>
         </div>
-
-        <canvas id="gameCanvas"></canvas>
-
-        <div class="controls">
-            <div class="dpad">
-                <button id="btn-left">◀</button>
-                <button id="btn-right">▶</button>
-            </div>
-            <div class="actions">
-                <button id="btn-jump">A</button>
-            </div>
+        <div class="stats-right">
+            <div>PROGRESS: 40%</div>
+            <div><span class="glow-text">WORLD: DUBAI-1</span></div>
+            <div>LIVES: 3</div>
         </div>
     </div>
-    <script src="game.js"></script>
+
+    <div id="resume-dialog" class="resume-dialog">
+        <h2 id="dialog-title"></h2>
+        <p id="dialog-body"></p>
+        <span class="close-hint">[ НАЖМИ КНОПКУ 'B' / 'BACK' ДЛЯ ЗАКРЫТИЯ ]</span>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="controls">
+        <div class="dpad">
+            <div class="dpad-btn btn-left" id="ctrl-left"></div>
+            <div class="dpad-btn btn-right" id="ctrl-right"></div>
+        </div>
+        <div class="action-btns">
+            <div class="btn-round" id="ctrl-b" style="background: #50c050; transform: translateY(15px);">B</div>
+            <div class="btn-round" id="ctrl-a" style="background: #e03030;">A</div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * ==========================================
+ * PIXEL SPRITE MATRIX (Детализированные спрайты)
+ * Мы рисуем их кодом для идеального Pixel Perfect
+ * ==========================================
+ */
+const PALETTE = {
+    '0': 'transparent', '1': '#000', '2': '#fff', 
+    's': '#f8c8a0', // Кожа
+    'h': '#a06840', // Волосы (каштановые)
+    't': '#fff',    // Футболка
+    'j': '#385888', // Джинсы
+    'q1': '#f8b800', // Желтый блок
+    'q2': '#f8e8b8', // Светлый блик
+    'r1': '#e83030', // Враг Красный
+    'r2': '#500000', // Враг Тень
+};
+
+// Спрайт Игрока (Ваше фото: каштановые волосы, белая футболка) - 16x24
+const sprPlayer = [
+    "0000111111000000",
+    "0001hhhhhh100000",
+    "001hhhhhhhs10000",
+    "01hhhhhsssss1000",
+    "01hhsssssssss100",
+    "11hssss1ss1ss100",
+    "1sssss1ss1ss1s10",
+    "1sssssssssssss10",
+    "01ssssss1sssss10",
+    "01sssss111sss100",
+    "0011ssssssss1100",
+    "0001222222221000",
+    "001ttttt1ttttt10",
+    "01ttttttt1ttttt1",
+    "01ttt1tt11tt1tt1",
+    "01tt1ttt11ttt1t1",
+    "001tttttt1ttttt1",
+    "00011ttt11ttt110",
+    "00001jjjjjjjj100",
+    "00001jjj11jjj100",
+    "00001jjj11jjj100",
+    "0001jjj1001jjj10",
+    "001jjj100001jjj1",
+    "0011110000001111"
+];
+
+// Спрайт Врага (Красный робот-патруль) - 16x16
+const sprEnemy = [
+    "0000111111000000",
+    "0001r1r1r1r10000",
+    "001r1r1r1r1r1000",
+    "01r1r1r1r1r1r100",
+    "1r1r122r22r1r1r1",
+    "1r1r22r22r1r1r1",
+    "1rrrrrrrrrrrrrr1",
+    "1r1r1r1111r1r1r1",
+    "1rrrrrrrrrrrrrr1",
+    "01rrr22222rrr100",
+    "001rrrrrrrrrr1000",
+    "00011rrrrrr11000",
+    "00001jjjjjj10000",
+    "0001jjj00jjj1000",
+    "001jjj0000jjj100",
+    "0011100000011100"
+];
+
+// Функция отрисовки пиксельного спрайта
+function drawSprite(ctx, spriteMap, x, y, scale = 1, flipH = false) {
+    ctx.save();
+    if (flipH) {
+        ctx.translate(x + spriteMap[0].length * scale, y);
+        ctx.scale(-1, 1);
+        ctx.translate(-x, -y);
+    }
+    for (let row = 0; row < spriteMap.length; row++) {
+        for (let col = 0; col < spriteMap[row].length; col++) {
+            let colorCode = spriteMap[row][col];
+            if (colorCode !== '0' && PALETTE[colorCode]) {
+                ctx.fillStyle = PALETTE[colorCode];
+                ctx.fillRect(x + col * scale, y + row * scale, scale, scale);
+            }
+        }
+    }
+    ctx.restore();
+}
+
+/**
+ * ==========================================
+ * GAME ENGINE (Премиальная физика и рендер)
+ * ==========================================
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let cw, ch;
+
+// Константы
+const SCALE = 2.5; // Увеличение пикселей для четкости
+const TILE_SIZE = 16 * SCALE;
+const PLAYER_W = 16 * SCALE;
+const PLAYER_H = 24 * SCALE;
+
+// Данные Резюме (Дорогие тексты)
+const RESUME_DATA = {
+    exp: { title: "EXPERIENCE PORTFOLIO", body: "ФРИЛАНС-РАЗРАБОТЧИК (2024-2026)<br>• Создание интерактивных веб-приложений<br>• Разработка Pixel-Art интерфейсов<br>• Оптимизация производительности на чистом JS" },
+    skills: { title: "MY TECH STACK", body: "Frontend: React, Vue, HTML5, CSS3<br>Core: JavaScript (ES6+), Vanilla JS<br>Tools: Git, Figma, Webpack" },
+    about: { title: "CREATIVE PROFILE", body: "Я disvolo17. Я превращаю сухие данные в увлекательный цифровой опыт. Специализируюсь на стыке дизайна и кода." }
+};
+
+// Состояние игры
+const state = {
+    gravity: 0.8,
+    friction: 0.85,
+    cameraX: 0,
+    levelWidth: 3000, // Длинный горизонтальный уровень
+    activeDialog: null,
+    lives: 3,
+    score: 2500,
+    particles: []
+};
+
+// Многослойный Фон (Параллакс Дубая)
+const backgroundLayers = [
+    { color: '#00264d', speed: 0.1, items: [] }, // Далекое небо
+    { color: '#1a53ff', speed: 0.3, items: [] }, // Облака
+    { color: '#001326', speed: 0.6, items: [] }, // Небоскребы Дубая
+];
+
+// Создаем параллакс объекты
+function initParallax() {
+    // Небоскребы (Силуэты)
+    backgroundLayers[2].items = [];
+    for(let i=0; i<30; i++) {
+        backgroundLayers[2].items.push({
+            x: i * 150,
+            y: ch - 300 - Math.random()*200,
+            w: 80 + Math.random()*100,
+            h: 300 + Math.random()*200,
+            color: '#0a2a43'
+        });
+    }
+}
+
+// Объекты Мира
+const player = {
+    x: 150, y: 0, w: PLAYER_W, h: PLAYER_H,
+    vx: 0, vy: 0, speed: 6, jumpForce: -16,
+    isGrounded: false, facing: 1 // 1 - право, -1 - лево
+};
+
+const platforms = [];
+const blocks = [];
+const enemies = [];
+
+// Генерация уровня
+function buildLevel() {
+    platforms.push({ x: 0, y: ch - 60, w: state.levelWidth, h: 60, type: 'ground' }); // Земля
+    
+    // Платформы и Блоки
+    addBlocksRow(300, ch-200, 3); // Ряд блоков
+    addQuestBlock(600, ch-200, RESUME_DATA.about); // Блок "Обо мне"
+    
+    platforms.push({ x: 900, y: ch - 150, w: 200, h: 20 });
+    addQuestBlock(1000, ch-320, RESUME_DATA.exp); // Блок "Опыт"
+    
+    platforms.push({ x: 1300, y: ch - 220, w: 150, h: 20 });
+    addEnemiesRow(1500, ch-200, 2); // Враги
+    
+    addQuestBlock(1800, ch-200, RESUME_DATA.skills); // Блок "Навыки"
+    
+    // Конец уровня (Труба Дубая)
+    platforms.push({ x: 2800, y: ch-140, w: 100, h: 80, type: 'pipe' });
+}
+
+function addQuestBlock(x, y, data) {
+    blocks.push({ x, y, w: TILE_SIZE, h: TILE_SIZE, type: 'q', data: data, hit: false });
+}
+function addBlocksRow(x, y, count) {
+    for(let i=0; i<count; i++) {
+        blocks.push({ x: x + i*TILE_SIZE, y, w: TILE_SIZE, h: TILE_SIZE, type: 'brick', hit: false });
+    }
+}
+function addEnemiesRow(x, y, count) {
+    for(let i=0; i<count; i++) {
+        enemies.push({ x: x + i*200, y: ch-110, w: 16*SCALE, h: 16*SCALE, vx: -2, startX: x + i*200, range: 150 });
+    }
+}
+
+/**
+ * ==========================================
+ * ГЕЙМПЛЕЙНАЯ ЛОГИКА И УБИЙСТВА
+ * ==========================================
+ */
+const keys = {};
+window.addEventListener('keydown', e => keys[e.code] = true);
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+// Сенсорное управление
+function setupControls() {
+    const bind = (id, key, val) => {
+        const el = document.getElementById(id);
+        el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[key] = val; });
+        el.addEventListener('touchend', (e) => { e.preventDefault(); keys[key] = !val; });
+    };
+    bind('ctrl-left', 'ArrowLeft', true);
+    bind('ctrl-right', 'ArrowRight', true);
+    bind('ctrl-a', 'Space', true); // Прыжок
+    document.getElementById('ctrl-b').ontouchstart = closeDialog; // Кнопка B закрывает
+}
+
+function resetGame() {
+    state.lives = 3;
+    state.cameraX = 0;
+    player.x = 150; player.y = 0; player.vx = 0; player.vy = 0;
+    // Сброс врагов и блоков
+    enemies.forEach(e => e.x = e.startX);
+    blocks.forEach(b => b.hit = false);
+    document.getElementById('dialog-title').innerText = "";
+    document.getElementById('resume-dialog').style.display = 'none';
+}
+
+function update() {
+    if (state.activeDialog) return;
+
+    // Управление
+    if (keys['ArrowLeft'] || keys['KeyA']) { player.vx = -player.speed; player.facing = -1; }
+    else if (keys['ArrowRight'] || keys['KeyD']) { player.vx = player.speed; player.facing = 1; }
+    else player.vx *= state.friction;
+
+    if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && player.isGrounded) {
+        player.vy = player.jumpForce;
+        player.isGrounded = false;
+    }
+
+    // Физика
+    player.vy += state.gravity;
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // Скроллинг камеры (следует за игроком)
+    state.cameraX = Math.max(0, Math.min(player.x - cw / 3, state.levelWidth - cw));
+
+    player.isGrounded = false;
+
+    // Коллизии с платформами
+    platforms.forEach(p => {
+        if (player.x < p.x + p.w && player.x + player.w > p.x &&
+            player.y < p.y + p.h && player.y + player.h > p.y) {
+            
+            // Сверху
+            if (player.vy > 0 && player.y + player.h - player.vy <= p.y) {
+                player.y = p.y - player.h; player.vy = 0; player.isGrounded = true;
+            }
+        }
+    });
+
+    // Удары по блокам снизу
+    blocks.forEach(b => {
+        if (player.vy < 0 && player.x + player.w > b.x && player.x < b.x + b.w &&
+            player.y < b.y + b.h && player.y > b.y) {
+            
+            player.y = b.y + b.h; player.vy = 3; // Отскок
+            
+            if(!b.hit) {
+                b.hit = true;
+                if(b.data) showDialog(b.data);
+                createGlowParticles(b.x + b.w/2, b.y + b.h/2);
+            }
+        }
+    });
+
+    // Логика Врагов (Патруль + Убийство)
+    enemies.forEach(e => {
+        e.x += e.vx;
+        if (Math.abs(e.x - e.startX) > e.range) e.vx *= -1; // Разворот
+
+        // Убийство игрока при столкновении
+        if (player.x < e.x + e.w && player.x + player.w > e.x &&
+            player.y < e.y + e.h && player.y + player.h > e.y) {
+            // Столкновение! Перезагрузка
+            createDeathEffect(player.x, player.y);
+            resetGame();
+        }
+    });
+
+    // Смерть от падения
+    if (player.y > ch) resetGame();
+
+    // Частицы
+    state.particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.life -= 0.02; });
+    state.particles = state.particles.filter(p => p.life > 0);
+}
+
+/**
+ * ==========================================
+ * ПРЕМИАЛЬНЫЙ РЕНДЕР (Пост-эффекты и Glow)
+ * ==========================================
+ */
+function draw() {
+    ctx.clearRect(0, 0, cw, ch);
+
+    // 1. Отрисовка Параллакс фона
+    backgroundLayers.forEach(layer => {
+        ctx.fillStyle = layer.color;
+        layer.items.forEach(item => {
+            // Рассчитываем позицию с учетом параллакс сдвига
+            const parallaxX = item.x - state.cameraX * layer.speed;
+            ctx.fillRect(parallaxX, item.y, item.w, item.h);
+        });
+    });
+
+    ctx.save();
+    ctx.translate(-state.cameraX, 0); // Все объекты мира сдвигаются камерой
+
+    // 2. Отрисовка Земли
+    platforms.forEach(p => {
+        if (p.type === 'ground') {
+            ctx.fillStyle = '#c84c0c'; // Коричневая земля
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = '#4db84d'; // Трава
+            ctx.fillRect(p.x, p.y, p.w, 10);
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+            ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.w, p.y); ctx.stroke();
+        } else {
+            ctx.fillStyle = '#ccc'; ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(p.x, p.y, p.w, p.h);
+        }
+    });
+
+    // 3. Блоки (со свечением Glow)
+    blocks.forEach(b => {
+        if (b.type === 'q' && !b.hit) {
+            // Спецэффект свечения для неиспользованных квест-блоков
+            ctx.shadowColor = 'rgba(255,232,184,0.8)';
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = PALETTE['q1']; // Желтый
+        } else {
+            ctx.shadowBlur = 0; // Выключить для других
+            ctx.fillStyle = b.hit ? '#888' : PALETTE['q1'];
+        }
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.strokeRect(b.x, b.y, b.w, b.h);
+        ctx.shadowBlur = 0; // Сброс
+    });
+
+    // 4. Враги
+    enemies.forEach(e => {
+        drawSprite(ctx, sprEnemy, e.x, e.y, SCALE, e.vx > 0);
+    });
+
+    // 5. Игрок
+    drawSprite(ctx, sprPlayer, player.x, player.y, SCALE, player.facing === -1);
+
+    // 6. Частицы (Glow для частиц)
+    state.particles.forEach(p => {
+        ctx.shadowColor = 'rgba(255,255,255,0.7)';
+        ctx.shadowBlur = 8;
+        ctx.fillStyle = `rgba(255,255,255,${p.life})`;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.shadowBlur = 0;
+    });
+
+    ctx.restore(); // Сброс трансформации камеры
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+/**
+ * ==========================================
+ * UI И СОБЫТИЯ
+ * ==========================================
+ */
+function showDialog(data) {
+    state.activeDialog = data;
+    document.getElementById('dialog-title').innerText = data.title;
+    document.getElementById('dialog-body').innerHTML = data.body;
+    document.getElementById('resume-dialog').style.display = 'block';
+}
+
+function closeDialog() {
+    state.activeDialog = null;
+    document.getElementById('resume-dialog').style.display = 'none';
+}
+
+// Эффект Glow частиц при выбивании блока
+function createGlowParticles(x, y) {
+    for(let i=0; i<8; i++) {
+        state.particles.push({
+            x, y, vx: (Math.random()-0.5)*12, vy: (Math.random()-1)*12, 
+            size: Math.random()*5+3, life: 1.0
+        });
+    }
+}
+
+// Эффект смерти
+function createDeathEffect(x, y) {
+    for(let i=0; i<20; i++) {
+        state.particles.push({
+            x, y, vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15, 
+            size: 8, life: 1.5
+        });
+    }
+}
+
+// Запуск
+window.onload = () => {
+    cw = canvas.width = window.innerWidth;
+    ch = canvas.height = window.innerHeight;
+    
+    player.y = ch - 200; // Стартовая позиция
+    
+    initParallax();
+    buildLevel();
+    setupControls();
+    resetGame(); // Начать игру
+    
+    window.addEventListener('resize', () => { cw=canvas.width=window.innerWidth; ch=canvas.height=window.innerHeight; });
+    
+    loop();
+};
+
+// Пробел закрывает диалог (ПК)
+window.addEventListener('keydown', e => {
+    if(e.code === 'Space' && state.activeDialog) closeDialog();
+});
+</script>
 </body>
 </html>
