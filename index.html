@@ -2,150 +2,195 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Pixel Resume Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mario Resume Game</title>
     <style>
-        body { margin: 0; background: #1a1a1a; font-family: 'Courier New', Courier, monospace; overflow: hidden; color: white; }
-        canvas { display: block; background: #2d4c2d; margin: 0 auto; image-rendering: pixelated; border: 5px solid #444; }
-        #ui { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
-              background: #000; padding: 20px; border: 4px solid #fff; 
-              width: 80%; max-width: 600px; display: none; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        #ui-title { font-weight: bold; color: #55ff55; margin-bottom: 10px; border-bottom: 1px solid #333; }
-        .hint { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 10px; font-size: 14px; border: 1px solid #555; }
+        body { margin: 0; background: #5c94fc; font-family: 'Courier New', monospace; overflow: hidden; touch-action: none; }
+        canvas { display: block; image-rendering: pixelated; margin: 0 auto; background: #5c94fc; }
+        
+        /* Стили для мобильного управления */
+        .controls { position: absolute; bottom: 20px; left: 20px; display: flex; gap: 10px; }
+        .btn { width: 60px; height: 60px; background: rgba(255,255,255,0.3); border-radius: 50%; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; user-select: none; }
+        .jump-btn { position: absolute; bottom: 20px; right: 20px; background: rgba(255,0,0,0.5); width: 80px; height: 80px; }
+        
+        #ui-overlay { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); 
+                      background: white; border: 4px solid #000; padding: 20px; width: 80%; 
+                      max-width: 400px; display: none; text-align: center; z-index: 100; }
     </style>
 </head>
 <body>
 
-<div class="hint">🎮 <b>Управление:</b> WASD или СТРЕЛКИ<br>💬 <b>Взаимодействие:</b> ПРОБЕЛ рядом с объектами</div>
-<div id="ui">
-    <div id="ui-title"></div>
-    <div id="ui-content" style="white-space: pre-wrap; line-height: 1.4;"></div>
-    <div style="font-size: 11px; margin-top: 15px; color: #777; text-align: right;">[Нажми ПРОБЕЛ, чтобы закрыть]</div>
+<div id="ui-overlay">
+    <h2 id="ui-title"></h2>
+    <p id="ui-text"></p>
+    <button onclick="closeUI()">ЗАКРЫТЬ</button>
 </div>
 
-<canvas id="gameCanvas"></canvas>
+<div class="controls">
+    <div class="btn" id="leftBtn">←</div>
+    <div class="btn" id="rightBtn">→</div>
+</div>
+<div class="btn jump-btn" id="jumpBtn">A</div>
+
+<canvas id="game"></canvas>
 
 <script>
-/** * СЮДА ВСТАВЬТЕ СВОИ ДАННЫЕ ВМЕСТО ПРИМЕРОВ:
- */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// --- ДАННЫЕ РЕЗЮМЕ ---
 const RESUME_DATA = {
-    intro: {
-        title: "КТО Я? (ОБО МНЕ)",
-        text: "Привет! Я disvolo17. \nЯ создаю цифровые миры и интерфейсы. \nДобро пожаловать в мое резюме-игру!"
-    },
-    skills: {
-        title: "МОЙ СТЕК ТЕХНОЛОГИЙ",
-        text: "• Frontend: HTML5, CSS3, JavaScript\n• Frameworks: React, Bootstrap\n• Tools: Git, GitHub Pages, VS Code\n• Graphics: Pixel Art, Figma"
-    },
-    experience: {
-        title: "ОПЫТ РАБОТЫ",
-        text: "— Проект A: Разработка лендингов\n— Проект B: Создание интерактивных карт\n— Фриланс: Помощь в автоматизации процессов"
-    },
-    contacts: {
-        title: "СВЯЗАТЬСЯ СО МНОЙ",
-        text: "GitHub: https://github.com/disvolo17\nСайт: disvolo17.github.io\nEmail: (ваш email здесь)"
-    }
+    exp: { title: "ОПЫТ РАБОТЫ", text: "Фриланс-разработчик (2 года). Создание интерфейсов и игр на JS/HTML." },
+    skills: { title: "НАВЫКИ", text: "Frontend: React, Vue, JS, CSS3.\nDesign: Figma, Pixel Art." },
+    contact: { title: "КОНТАКТЫ", text: "GitHub: disvolo17\nTelegram: @yourname" }
 };
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const ui = document.getElementById('ui');
-const uiTitle = document.getElementById('ui-title');
-const uiContent = document.getElementById('ui-content');
+// Настройки экрана
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
 
-canvas.width = 800;
-canvas.height = 600;
+// Игровые переменные
+const gravity = 0.8;
+const player = {
+    x: 50, y: 100, w: 40, h: 60,
+    vx: 0, vy: 0,
+    speed: 5, jumpPower: -15,
+    grounded: false,
+    color: '#f0d0b0' // Цвет кожи
+};
 
-const player = { x: 400, y: 300, size: 24, speed: 5, color: '#00ff00' };
-const keys = {};
-let activeDialog = null;
-
-// Объекты на карте
-const points = [
-    { x: 200, y: 150, size: 30, color: '#ff4444', label: 'ПРИВЕТСТВИЕ', data: RESUME_DATA.intro },
-    { x: 600, y: 150, size: 30, color: '#4444ff', label: 'НАВЫКИ', data: RESUME_DATA.skills },
-    { x: 200, y: 450, size: 30, color: '#ffff44', label: 'ОПЫТ', data: RESUME_DATA.experience },
-    { x: 600, y: 450, size: 30, color: '#ff44ff', label: 'КОНТАКТЫ', data: RESUME_DATA.contacts },
+const platforms = [
+    { x: 0, y: canvas.height - 40, w: 2000, h: 40, type: 'ground' }, // Земля
+    { x: 200, y: canvas.height - 180, w: 50, h: 50, type: 'block', data: RESUME_DATA.exp, active: true },
+    { x: 400, y: canvas.height - 250, w: 50, h: 50, type: 'block', data: RESUME_DATA.skills, active: true },
+    { x: 600, y: canvas.height - 180, w: 50, h: 50, type: 'block', data: RESUME_DATA.contact, active: true }
 ];
 
-window.addEventListener('keydown', e => {
-    keys[e.code] = true;
-    if (e.code === 'Space') {
-        if (activeDialog) {
-            activeDialog = null;
-            ui.style.display = 'none';
-        } else {
-            points.forEach(p => {
-                const dist = Math.hypot(player.x - p.x, player.y - p.y);
-                if (dist < 50) {
-                    activeDialog = p.data;
-                    uiTitle.innerText = p.data.title;
-                    uiContent.innerText = p.data.text;
-                    ui.style.display = 'block';
-                }
-            });
-        }
-    }
-});
+const keys = {};
+window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => keys[e.code] = false);
 
+// Мобильные события
+const setupBtn = (id, code) => {
+    const el = document.getElementById(id);
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); keys[code] = true; });
+    el.addEventListener('touchend', (e) => { e.preventDefault(); keys[code] = false; });
+};
+setupBtn('leftBtn', 'ArrowLeft');
+setupBtn('rightBtn', 'ArrowRight');
+setupBtn('jumpBtn', 'Space');
+
+function closeUI() {
+    document.getElementById('ui-overlay').style.display = 'none';
+    player.vx = 0;
+}
+
 function update() {
-    if (activeDialog) return;
+    if (document.getElementById('ui-overlay').style.display === 'block') return;
 
-    if (keys['ArrowUp'] || keys['KeyW']) player.y -= player.speed;
-    if (keys['ArrowDown'] || keys['KeyS']) player.y += player.speed;
-    if (keys['ArrowLeft'] || keys['KeyA']) player.x -= player.speed;
-    if (keys['ArrowRight'] || keys['KeyD']) player.x += player.speed;
+    if (keys['ArrowLeft'] || keys['KeyA']) player.vx = -player.speed;
+    else if (keys['ArrowRight'] || keys['KeyD']) player.vx = player.speed;
+    else player.vx = 0;
 
-    player.x = Math.max(0, Math.min(canvas.width - player.size, player.x));
-    player.y = Math.max(0, Math.min(canvas.height - player.size, player.y));
+    if ((keys['Space'] || keys['ArrowUp'] || keys['KeyW']) && player.grounded) {
+        player.vy = player.jumpPower;
+        player.grounded = false;
+    }
+
+    player.vy += gravity;
+    player.x += player.vx;
+    player.y += player.vy;
+
+    player.grounded = false;
+
+    // Коллизии
+    platforms.forEach(p => {
+        if (player.x < p.x + p.w && player.x + player.w > p.x &&
+            player.y < p.y + p.h && player.y + player.h > p.y) {
+            
+            // Если упал сверху
+            if (player.vy > 0 && player.y + player.h - player.vy <= p.y) {
+                player.y = p.y - player.h;
+                player.vy = 0;
+                player.grounded = true;
+            }
+            // Если ударился головой (Марио-стайл)
+            else if (player.vy < 0 && p.type === 'block') {
+                player.y = p.y + p.h;
+                player.vy = 2;
+                showInfo(p.data);
+            }
+        }
+    });
+
+    // Смерть (падение)
+    if (player.y > canvas.height) { player.x = 50; player.y = 100; }
+}
+
+function showInfo(data) {
+    const ui = document.getElementById('ui-overlay');
+    document.getElementById('ui-title').innerText = data.title;
+    document.getElementById('ui-text').innerText = data.text;
+    ui.style.display = 'block';
+}
+
+function drawPlayer() {
+    // Тело (футболка с принтом)
+    ctx.fillStyle = 'white';
+    ctx.fillRect(player.x, player.y + 20, player.w, 25);
+    ctx.fillStyle = '#333';
+    ctx.fillRect(player.x + 10, player.y + 25, 20, 15); // "Принт"
+    
+    // Голова
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x + 5, player.y, 30, 25);
+    
+    // Волосы (как на фото)
+    ctx.fillStyle = '#634e34';
+    ctx.fillRect(player.x + 5, player.y, 30, 8);
+    ctx.fillRect(player.x + 25, player.y, 10, 15);
+    
+    // Штаны
+    ctx.fillStyle = '#2b4570';
+    ctx.fillRect(player.x, player.y + 45, player.w, 15);
 }
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Сетка земли
-    ctx.strokeStyle = '#355a35';
-    for(let i=0; i<canvas.width; i+=40) {
-        ctx.beginPath(); ctx.moveTo(i,0); ctx.lineTo(i,canvas.height); ctx.stroke();
-    }
-    for(let i=0; i<canvas.height; i+=40) {
-        ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(canvas.width,i); ctx.stroke();
-    }
-
-    // Рисуем интерактивные блоки
-    points.forEach(p => {
-        // Тень
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.fillRect(p.x - 12, p.y + 10, 30, 15);
-        
-        // Блок
-        ctx.fillStyle = p.color;
-        ctx.fillRect(p.x - 15, p.y - 15, 30, 30);
-        
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.label, p.x, p.y - 25);
-        
-        const dist = Math.hypot(player.x - p.x, player.y - p.y);
-        if (dist < 50) {
-            ctx.fillStyle = '#55ff55';
-            ctx.fillText("[ПРОБЕЛ]", p.x, p.y + 35);
+    // Рисуем платформы
+    platforms.forEach(p => {
+        if (p.type === 'ground') {
+            ctx.fillStyle = '#8b4513';
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = '#32cd32';
+            ctx.fillRect(p.x, p.y, p.w, 10);
+        } else {
+            // Золотой блок
+            ctx.fillStyle = '#ffcc00';
+            ctx.fillRect(p.x, p.y, p.w, p.h);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(p.x, p.y, p.w, p.h);
+            ctx.fillStyle = '#000';
+            ctx.font = '20px Arial';
+            ctx.fillText('?', p.x + 18, p.y + 32);
         }
     });
 
-    // Рисуем игрока
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.size, player.size);
-    // Лицо
-    ctx.fillStyle = 'black';
-    ctx.fillRect(player.x + 4, player.y + 6, 4, 4);
-    ctx.fillRect(player.x + 16, player.y + 6, 4, 4);
+    drawPlayer();
+    
+    // Текст-подсказка в небе
+    ctx.fillStyle = 'white';
+    ctx.font = '16px "Courier New"';
+    ctx.fillText("ПРЫГАЙ ГОЛОВОЙ В БЛОКИ '?'", 50, 50);
 
-    requestAnimationFrame(() => {
-        update();
-        draw();
-    });
+    update();
+    requestAnimationFrame(draw);
 }
 
 draw();
