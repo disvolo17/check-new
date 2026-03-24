@@ -2,9 +2,9 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Cyber Mario</title>
+    <title>Cyber Mario - Parallax Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #001a00; font-family: 'Courier New', Courier, monospace; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         canvas { display: block; }
         #ui {
             position: absolute;
@@ -14,6 +14,7 @@
             font-size: 24px;
             text-shadow: 2px 2px #000;
             pointer-events: none;
+            z-index: 10;
         }
     </style>
 </head>
@@ -34,7 +35,6 @@ window.addEventListener("load", () => {
     window.addEventListener('resize', resize);
     resize();
 
-    // ===== ЗАГРУЗКА РЕСУРСОВ =====
     function load(src) {
         return new Promise(res => {
             const img = new Image();
@@ -45,25 +45,29 @@ window.addEventListener("load", () => {
     }
 
     (async function() {
+        // ===== ЗАГРУЗКА СПРАЙТОВ И ФОНОВ =====
         const sprites = {
             idle: await load("idle.png"),
             jump: await load("jump.png"),
             fall: await load("fall.png"),
             run: [
-                await load("run.png"),
-                await load("run1.png"),
-                await load("run2.png"),
-                await load("run3.png")
+                await load("run.png"), await load("run1.png"), 
+                await load("run2.png"), await load("run3.png")
             ]
+        };
+
+        const backgrounds = {
+            bg1: await load("bg1.png"), // Дальний слой (медленный)
+            bg2: await load("bg2.png"), // Средний слой
+            bg3: await load("bg3.png")  // Ближний слой (быстрый)
         };
 
         const platformImg = await load("platform.png");
         const coinImg = await load("coin.png");
         const enemyImg = await load("enemy.png");
 
-        // ===== ПАРАМЕТРЫ ИГРОКА =====
         let player = {
-            x: 100, y: 100, w: 80, h: 80,
+            x: 100, y: 100, w: 70, h: 70,
             vx: 0, vy: 0,
             gravity: 0.8,
             jumpPower: -16,
@@ -79,57 +83,32 @@ window.addEventListener("load", () => {
         let cameraX = 0;
         let state = "start";
 
-        // ===== ГЕНЕРАЦИЯ МИРА =====
         let platforms = [];
         for (let i = 0; i < 100; i++) {
-            platforms.push({
-                x: i * 300,
-                y: 500 + Math.sin(i * 0.5) * 150,
-                w: 250,
-                h: 40
-            });
+            platforms.push({ x: i * 320, y: 550 + Math.sin(i * 0.5) * 120, w: 220, h: 40 });
         }
 
         let coins = [];
         for (let i = 0; i < 50; i++) {
-            coins.push({
-                x: i * 400 + 200,
-                y: 300,
-                size: 32,
-                taken: false
-            });
+            coins.push({ x: i * 400 + 200, y: 350, size: 32, taken: false });
         }
 
         let enemies = [];
         for (let i = 0; i < 30; i++) {
-            enemies.push({
-                x: i * 600 + 400,
-                y: 400,
-                w: 50,
-                h: 50,
-                vx: 2,
-                range: 100,
-                startX: i * 600 + 400,
-                alive: true
-            });
+            enemies.push({ x: i * 650 + 500, y: 450, w: 50, h: 50, vx: 2, range: 150, startX: i * 650 + 500, alive: true });
         }
 
-        // ===== УПРАВЛЕНИЕ =====
         window.addEventListener("keydown", e => {
-            if (e.code === "Space" && state === "game") {
-                if (player.jumps < player.maxJumps) {
-                    player.vy = player.jumpPower;
-                    player.jumps++;
-                }
+            if (e.code === "Space" && state === "game" && player.jumps < player.maxJumps) {
+                player.vy = player.jumpPower;
+                player.jumps++;
             }
             keys[e.code] = true;
             if (state === "start" && e.code === "Enter") state = "game";
             if (state === "gameover" && e.code === "Enter") location.reload();
         });
-
         window.addEventListener("keyup", e => { keys[e.code] = false; });
 
-        // ===== ОБНОВЛЕНИЕ ЛОГИКИ =====
         function update() {
             if (state !== "game") return;
 
@@ -142,13 +121,9 @@ window.addEventListener("load", () => {
             player.y += player.vy;
 
             player.grounded = false;
-
-            // Коллизии с платформами
             platforms.forEach(p => {
-                if (player.x + 20 < p.x + p.w &&
-                    player.x + player.w - 20 > p.x &&
-                    player.y + player.h > p.y &&
-                    player.y + player.h < p.y + p.h + 20) {
+                if (player.x + 15 < p.x + p.w && player.x + player.w - 15 > p.x &&
+                    player.y + player.h > p.y && player.y + player.h < p.y + p.h + 20) {
                     if (player.vy > 0) {
                         player.y = p.y - player.h;
                         player.vy = 0;
@@ -158,43 +133,39 @@ window.addEventListener("load", () => {
                 }
             });
 
-            // Монетки
             coins.forEach(c => {
-                if (!c.taken &&
-                    player.x < c.x + c.size &&
-                    player.x + player.w > c.x &&
-                    player.y < c.y + c.size &&
-                    player.y + player.h > c.y) {
+                if (!c.taken && player.x < c.x + c.size && player.x + player.w > c.x &&
+                    player.y < c.y + c.size && player.y + player.h > c.y) {
                     c.taken = true;
                     player.coins++;
                     document.getElementById("ui").innerText = "COINS: " + player.coins;
                 }
             });
 
-            // Враги
             enemies.forEach(e => {
                 if (!e.alive) return;
                 e.x += e.vx;
                 if (Math.abs(e.x - e.startX) > e.range) e.vx *= -1;
-
-                if (player.x < e.x + e.w &&
-                    player.x + player.w > e.x &&
-                    player.y < e.y + e.h &&
-                    player.y + player.h > e.y) {
-                    if (player.vy > 5) {
-                        e.alive = false;
-                        player.vy = -12;
-                    } else {
-                        state = "gameover";
-                    }
+                if (player.x < e.x + e.w && player.x + player.w > e.x &&
+                    player.y < e.y + e.h && player.y + player.h > e.y) {
+                    if (player.vy > 5) { e.alive = false; player.vy = -12; }
+                    else { state = "gameover"; }
                 }
             });
 
-            if (player.y > canvas.height + 500) state = "gameover";
+            if (player.y > canvas.height + 600) state = "gameover";
             cameraX = player.x - canvas.width / 2;
         }
 
-        // ===== ОТРИСОВКА =====
+        function drawBackgroundLayer(img, speed) {
+            if (!img) return;
+            // Рассчитываем смещение так, чтобы фон "зацикливался"
+            let x = -(cameraX * speed) % canvas.width;
+            ctx.drawImage(img, x, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, x + canvas.width, 0, canvas.width, canvas.height);
+            if (x > 0) ctx.drawImage(img, x - canvas.width, 0, canvas.width, canvas.height);
+        }
+
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -207,25 +178,23 @@ window.addEventListener("load", () => {
                 return;
             }
 
-            // Платформы
+            // РИСУЕМ ФОНЫ (Параллакс)
+            drawBackgroundLayer(backgrounds.bg1, 0.2); // Самый медленный
+            drawBackgroundLayer(backgrounds.bg2, 0.5); 
+            drawBackgroundLayer(backgrounds.bg3, 0.8); // Самый быстрый
+
             platforms.forEach(p => {
-                if (platformImg) {
-                    ctx.drawImage(platformImg, p.x - cameraX, p.y, p.w, p.h);
-                } else {
-                    ctx.fillStyle = "#00ff00";
-                    ctx.fillRect(p.x - cameraX, p.y, p.w, p.h);
-                }
+                if (platformImg) ctx.drawImage(platformImg, p.x - cameraX, p.y, p.w, p.h);
+                else { ctx.fillStyle = "#333"; ctx.fillRect(p.x - cameraX, p.y, p.w, p.h); }
             });
 
-            // Монеты
             coins.forEach(c => {
                 if (!c.taken) {
                     if (coinImg) ctx.drawImage(coinImg, c.x - cameraX, c.y, c.size, c.size);
-                    else { ctx.fillStyle = "yellow"; ctx.beginPath(); ctx.arc(c.x - cameraX + 16, c.y + 16, 10, 0, Math.PI * 2); ctx.fill(); }
+                    else { ctx.fillStyle = "yellow"; ctx.fillRect(c.x - cameraX, c.y, c.size, c.size); }
                 }
             });
 
-            // Враги
             enemies.forEach(e => {
                 if (e.alive) {
                     if (enemyImg) ctx.drawImage(enemyImg, e.x - cameraX, e.y, e.w, e.h);
@@ -233,11 +202,9 @@ window.addEventListener("load", () => {
                 }
             });
 
-            // Анимация игрока
             let img = sprites.idle;
-            if (!player.grounded) {
-                img = player.vy < 0 ? sprites.jump : sprites.fall;
-            } else if (player.vx !== 0) {
+            if (!player.grounded) img = player.vy < 0 ? sprites.jump : sprites.fall;
+            else if (player.vx !== 0) {
                 player.frame += 0.2;
                 img = sprites.run[Math.floor(player.frame) % sprites.run.length];
             }
@@ -246,30 +213,25 @@ window.addEventListener("load", () => {
             if (player.dir === -1) {
                 ctx.translate(player.x - cameraX + player.w, player.y);
                 ctx.scale(-1, 1);
-                if (img) ctx.drawImage(img, 0, 0, player.w, player.h);
-                else { ctx.fillStyle = "blue"; ctx.fillRect(0, 0, player.w, player.h); }
+                ctx.drawImage(img || new Image(), 0, 0, player.w, player.h);
             } else {
-                if (img) ctx.drawImage(img, player.x - cameraX, player.y, player.w, player.h);
-                else { ctx.fillStyle = "blue"; ctx.fillRect(player.x - cameraX, player.y, player.w, player.h); }
+                ctx.drawImage(img || new Image(), player.x - cameraX, player.y, player.w, player.h);
             }
             ctx.restore();
 
             if (state === "gameover") {
-                ctx.fillStyle = "rgba(255,0,0,0.5)";
+                ctx.fillStyle = "rgba(0,0,0,0.7)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "white";
+                ctx.fillStyle = "red";
                 ctx.font = "50px 'Courier New'";
                 ctx.fillText("GAME OVER", canvas.width / 2 - 130, canvas.height / 2);
+                ctx.fillStyle = "white";
                 ctx.font = "20px 'Courier New'";
                 ctx.fillText("PRESS ENTER TO RESTART", canvas.width / 2 - 140, canvas.height / 2 + 60);
             }
         }
 
-        function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
         loop();
     })();
 });
