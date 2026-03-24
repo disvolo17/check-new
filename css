@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body { margin: 0; background: #000; font-family: 'Press Start 2P', cursive; overflow: hidden; }
+
+#app {
+    position: relative; width: 100vw; height: 100vh;
+    background: #5c94fc; margin: 0 auto; max-width: 500px;
+}
+
+.hud {
+    position: absolute; top: 0; width: 100%; padding: 20px;
+    display: flex; justify-content: space-between; color: #fff;
+    font-size: 10px; z-index: 10; text-shadow: 2px 2px #000;
+}
+
+.avatar-container {
+    width: 50px; height: 50px; border: 3px solid #fff; 
+    background: #88ccee; margin-top: 5px; overflow: hidden;
+}
+
+#avatar-img { width: 100%; image-rendering: pixelated; }
+
+canvas { width: 100%; height: 100%; image-rendering: pixelated; }
+
+/* Кнопки для телефона */
+.controls {
+    position: absolute; bottom: 40px; width: 100%;
+    display: flex; justify-content: space-between; padding: 0 30px;
+}
+
+button {
+    width: 70px; height: 70px; border-radius: 50%; border: 4px solid #000;
+    background: rgba(255,255,255,0.2); color: #fff; font-size: 20px;
+}
+
+#btn-jump { background: #e03030; width: 85px; height: 85px; }
