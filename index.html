@@ -3,45 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Denis - Creative PM Interactive CV</title>
+    <title>Denis - PM & Creative CV</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
         body { margin: 0; overflow: hidden; background: #050505; font-family: 'Press Start 2P', cursive; touch-action: manipulation; }
         canvas { display: block; }
-        
-        #ui {
-            position: absolute; top: 20px; left: 0; right: 0;
-            color: #00ff00; font-size: 10px; text-align: center;
-            text-shadow: 2px 2px #000; pointer-events: none; z-index: 10;
-            line-height: 1.6; padding: 0 10px;
-        }
-
-        #progress {
-            position: absolute; top: 20px; right: 20px;
-            color: #FFD700; font-size: 12px; z-index: 10;
-        }
-
-        .controls {
-            position: absolute; bottom: 30px; width: 100%;
-            display: none; justify-content: space-between; padding: 0 40px; box-sizing: border-box;
-            user-select: none; z-index: 20;
-        }
-        .btn {
-            width: 65px; height: 65px; background: rgba(255,255,255,0.1);
-            border: 2px solid rgba(255,255,255,0.5); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 20px; backdrop-filter: blur(5px);
-        }
+        #ui { position: absolute; top: 20px; left: 0; right: 0; color: #00ff00; font-size: 10px; text-align: center; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; line-height: 1.6; padding: 0 10px; }
+        #progress { position: absolute; top: 20px; right: 20px; color: #FFD700; font-size: 10px; z-index: 10; }
+        .controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: space-between; padding: 0 40px; box-sizing: border-box; user-select: none; z-index: 20; }
+        .btn { width: 65px; height: 65px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; backdrop-filter: blur(5px); }
         .btn:active { background: rgba(0, 255, 0, 0.3); transform: scale(0.9); }
-        
         @media (pointer: coarse) { .controls { display: flex; } }
     </style>
 </head>
 <body>
 
 <div id="ui">РАЗБИВАЙ БЛОКИ, ЧТОБЫ УЗНАТЬ ОПЫТ ДЕНИСА</div>
-<div id="progress">BLOCKS: 0/7</div>
+<div id="progress">0/7</div>
 <canvas id="game"></canvas>
 
 <div class="controls">
@@ -86,17 +64,14 @@ window.addEventListener("load", () => {
         const platformImg = await load("platform.png");
 
         let player = {
-            x: 100, y: 100, w: 64, h: 64,
-            vx: 0, vy: 0, 
-            accel: 0.8, friction: 0.85, maxSpeed: 7,
-            gravity: 0.7, jumpPower: -15,
+            x: 100, y: 100, w: 64, h: 64, vx: 0, vy: 0, 
+            accel: 0.8, friction: 0.85, maxSpeed: 7, gravity: 0.7, jumpPower: -15,
             grounded: false, jumps: 0, maxJumps: 2, frame: 0, dir: 1
         };
 
-        let cameraX = 0;
-        let lerpCameraX = 0; // Для плавности камеры
+        let cameraX = 0, lerpCameraX = 0;
         let keys = { left: false, right: false };
-        let blocksHitCount = 0;
+        let blocksHitCount = 0, isFinished = false, fireworks = [];
 
         let resumeBlocks = [
             { x: 700, y: 350, text: "ДЕНИС — PROJECT MANAGER & CREATIVE PRODUCER", hit: false, offset: 0 },
@@ -115,41 +90,49 @@ window.addEventListener("load", () => {
 
         const finishLine = 5600;
 
-        // --- УПРАВЛЕНИЕ ---
-        window.addEventListener("keydown", e => {
-            if (e.code === "ArrowLeft") keys.left = true;
-            if (e.code === "ArrowRight") keys.right = true;
-            if (e.code === "Space") doJump();
-        });
-        window.addEventListener("keyup", e => {
-            if (e.code === "ArrowLeft") keys.left = false;
-            if (e.code === "ArrowRight") keys.right = false;
-        });
+        function createFirework() {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * (canvas.height / 2);
+            const colors = ['#0f0', '#ff0', '#f0f', '#0ff', '#fff'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            for (let i = 0; i < 20; i++) {
+                fireworks.push({
+                    x, y, 
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0, color
+                });
+            }
+        }
 
         function doJump() {
-            if (player.jumps < player.maxJumps) {
+            if (player.jumps < player.maxJumps && !isFinished) {
                 player.vy = player.jumpPower;
                 player.jumps++;
             }
         }
 
+        // Кнопки
         const bindBtn = (id, key) => {
             const el = document.getElementById(id);
             el.addEventListener("touchstart", (e) => { e.preventDefault(); if(key==='jump') doJump(); else keys[key] = true; });
             el.addEventListener("touchend", (e) => { e.preventDefault(); if(key!=='jump') keys[key] = false; });
         };
-        bindBtn("btnLeft", "left");
-        bindBtn("btnRight", "right");
-        bindBtn("btnJump", "jump");
+        bindBtn("btnLeft", "left"); bindBtn("btnRight", "right"); bindBtn("btnJump", "jump");
+        window.addEventListener("keydown", e => { if (e.code === "ArrowLeft") keys.left = true; if (e.code === "ArrowRight") keys.right = true; if (e.code === "Space") doJump(); });
+        window.addEventListener("keyup", e => { if (e.code === "ArrowLeft") keys.left = false; if (e.code === "ArrowRight") keys.right = false; });
 
-        // --- ЛОГИКА ---
         function update() {
-            // Физика движения
-            if (keys.left) { player.vx -= player.accel; player.dir = -1; }
-            else if (keys.right) { player.vx += player.accel; player.dir = 1; }
-            else { player.vx *= player.friction; }
+            if (!isFinished) {
+                if (keys.left) { player.vx -= player.accel; player.dir = -1; }
+                else if (keys.right) { player.vx += player.accel; player.dir = 1; }
+                else { player.vx *= player.friction; }
+            } else {
+                player.vx *= 0.9; // Тормозим на финише
+                if (player.grounded) player.vy = -12; // Прыгаем от радости
+                if (Math.random() < 0.1) createFirework();
+            }
 
-            // Ограничение скорости
             if (player.vx > player.maxSpeed) player.vx = player.maxSpeed;
             if (player.vx < -player.maxSpeed) player.vx = -player.maxSpeed;
 
@@ -159,54 +142,41 @@ window.addEventListener("load", () => {
 
             player.grounded = false;
             platforms.forEach(p => {
-                if (player.x + 15 < p.x + p.w && player.x + player.w - 15 > p.x &&
-                    player.y + player.h > p.y && player.y + player.h < p.y + p.h + 25) {
-                    if (player.vy > 0) {
-                        player.y = p.y - player.h;
-                        player.vy = 0;
-                        player.grounded = true;
-                        player.jumps = 0;
-                    }
+                if (player.x + 15 < p.x + p.w && player.x + player.w - 15 > p.x && player.y + player.h > p.y && player.y + player.h < p.y + p.h + 25) {
+                    if (player.vy > 0) { player.y = p.y - player.h; player.vy = 0; player.grounded = true; player.jumps = 0; }
                 }
             });
 
             resumeBlocks.forEach(b => {
-                // Плавное возвращение блока после удара
                 b.offset *= 0.8;
-
-                if (player.x + player.w > b.x && player.x < b.x + 60 &&
-                    player.y < b.y + 60 + b.offset && player.y + player.h > b.y + b.offset) {
+                if (player.x + player.w > b.x && player.x < b.x + 60 && player.y < b.y + 60 + b.offset && player.y + player.h > b.y + b.offset) {
                     if (player.vy < 0 && player.y > b.y + 20) {
-                        player.vy = 4;
-                        b.offset = -15; // Эффект подпрыгивания блока
-                        if (!b.hit) {
-                            b.hit = true;
-                            blocksHitCount++;
-                            progressText.innerText = `BLOCKS: ${blocksHitCount}/7`;
-                        }
+                        player.vy = 4; b.offset = -15;
+                        if (!b.hit) { b.hit = true; blocksHitCount++; progressText.innerText = `${blocksHitCount}/7`; }
                         ui.innerText = b.text;
                     }
                 }
             });
 
-            if (player.x > finishLine) {
-                ui.style.color = "yellow";
-                ui.innerText = "КРЕАТИВНЫЙ ПОТЕНЦИАЛ ПОДТВЕРЖДЕН. ПЕРЕХОД...";
-                setTimeout(() => { window.location.href = "https://disvolo17.github.io/work/"; }, 1500);
+            if (player.x > finishLine && !isFinished) {
+                isFinished = true;
+                ui.style.color = "#FFD700";
+                ui.innerText = "DENIS IS READY FOR YOUR PROJECT!";
+                setTimeout(() => { window.location.href = "https://disvolo17.github.io/work/"; }, 4000);
             }
 
             if (player.y > canvas.height + 200) { player.x = 100; player.y = 100; player.vx = 0; player.vy = 0; }
-            
-            // Плавная камера (Lerp)
             cameraX = player.x - canvas.width / 2;
             lerpCameraX += (cameraX - lerpCameraX) * 0.1;
+
+            fireworks.forEach((f, i) => {
+                f.x += f.vx; f.y += f.vy; f.life -= 0.02;
+                if (f.life <= 0) fireworks.splice(i, 1);
+            });
         }
 
-        // --- ОТРИСОВКА ---
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Параллакс
             bgs.forEach((bg, i) => {
                 if (!bg) return;
                 let speed = [0.15, 0.4, 0.7][i];
@@ -216,64 +186,43 @@ window.addEventListener("load", () => {
                 if (x > 0) ctx.drawImage(bg, x - canvas.width, 0, canvas.width, canvas.height);
             });
 
-            // Платформы
             platforms.forEach(p => {
                 if (platformImg) ctx.drawImage(platformImg, p.x - lerpCameraX, p.y, p.w, p.h);
-                else { 
-                    ctx.fillStyle = "#1a1a1a"; 
-                    ctx.fillRect(p.x - lerpCameraX, p.y, p.w, p.h);
-                    ctx.strokeStyle = "#00ff00";
-                    ctx.strokeRect(p.x - lerpCameraX, p.y, p.w, p.h);
-                }
+                else { ctx.fillStyle = "#1a1a1a"; ctx.fillRect(p.x - lerpCameraX, p.y, p.w, p.h); }
             });
 
-            // Блоки
             resumeBlocks.forEach(b => {
-                ctx.save();
-                ctx.translate(0, b.offset);
+                ctx.save(); ctx.translate(0, b.offset);
                 ctx.fillStyle = b.hit ? "#222" : "#FFD700";
-                ctx.shadowBlur = b.hit ? 0 : 15;
-                ctx.shadowColor = "#FFD700";
                 ctx.fillRect(b.x - lerpCameraX, b.y, 60, 60);
-                ctx.strokeStyle = "#fff";
-                ctx.strokeRect(b.x - lerpCameraX, b.y, 60, 60);
-                if (!b.hit) {
-                    ctx.fillStyle = "#000";
-                    ctx.font = "bold 30px Arial";
-                    ctx.fillText("?", b.x - lerpCameraX + 18, b.y + 42);
-                }
+                if (!b.hit) { ctx.fillStyle = "#000"; ctx.font = "bold 30px Arial"; ctx.fillText("?", b.x - lerpCameraX + 18, b.y + 42); }
                 ctx.restore();
             });
 
-            // Финиш
-            ctx.fillStyle = "#00ff00";
-            ctx.fillRect(finishLine - lerpCameraX, canvas.height - 400, 5, 300);
-            ctx.font = "10px 'Press Start 2P'";
-            ctx.fillText("FINISH", finishLine - lerpCameraX - 30, canvas.height - 420);
+            // Салют
+            fireworks.forEach(f => {
+                ctx.globalAlpha = f.life;
+                ctx.fillStyle = f.color;
+                ctx.fillRect(f.x, f.y, 4, 4);
+            });
+            ctx.globalAlpha = 1.0;
 
             // Игрок
             let img = sprites.idle;
             if (!player.grounded) img = (player.vy < 0) ? sprites.jump : sprites.fall;
-            else if (Math.abs(player.vx) > 0.5) {
+            else if (Math.abs(player.vx) > 0.5 || isFinished) {
                 player.frame += 0.2;
                 img = sprites.run[Math.floor(player.frame) % 4];
             }
 
             ctx.save();
-            if (player.dir === -1) {
-                ctx.translate(player.x - lerpCameraX + player.w, player.y);
-                ctx.scale(-1, 1);
-                ctx.drawImage(img || new Image(), 0, 0, player.w, player.h);
-            } else {
-                ctx.drawImage(img || new Image(), player.x - lerpCameraX, player.y, player.w, player.h);
-            }
+            if (player.dir === -1) { ctx.translate(player.x - lerpCameraX + player.w, player.y); ctx.scale(-1, 1); ctx.drawImage(img || new Image(), 0, 0, player.w, player.h); }
+            else { ctx.drawImage(img || new Image(), player.x - lerpCameraX, player.y, player.w, player.h); }
             ctx.restore();
 
             requestAnimationFrame(draw);
         }
-
-        setInterval(update, 1000/60);
-        draw();
+        setInterval(update, 1000/60); draw();
     })();
 });
 </script>
