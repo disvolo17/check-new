@@ -2,10 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Mario Clean</title>
+<title>Cyber Mario</title>
 
 <style>
-body { margin:0; overflow:hidden; background:#000; }
+body { margin:0; overflow:hidden; background:black; }
 canvas { display:block; }
 </style>
 
@@ -15,7 +15,7 @@ canvas { display:block; }
 <canvas id="game"></canvas>
 
 <script>
-window.onload = function() {
+window.onload = function(){
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -23,168 +23,249 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+function load(src){
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.src = src;
+    img.onload = ()=>resolve(img);
+  });
+}
+
+(async function(){
+
+const sprites = {
+  idle: await load("idle.png"),
+  jump: await load("jump.png"),
+  fall: await load("fall.png"),
+  run: [
+    await load("run.png"),
+    await load("run1.png"),
+    await load("run2.png"),
+    await load("run3.png")
+  ]
+};
+
+const bg = [
+  await load("image_2.png"),
+  await load("image_2.png"),
+  await load("image_2.png")
+];
+
+const platformImg = await load("platform.png");
+const coinImg = await load("coin.png");
+const enemyImg = await load("enemy.png");
+
 let player = {
-  x: 100,
-  y: 100,
-  w: 50,
-  h: 50,
-  vx: 0,
-  vy: 0,
-  gravity: 0.6,
-  jump: -12,
-  grounded: false,
-  jumps: 0,
-  maxJumps: 2
+  x:100,
+  y:100,
+  w:64,
+  h:64,
+  vx:0,
+  vy:0,
+  gravity:0.6,
+  jump:-14,
+  grounded:false,
+  frame:0,
+  dir:1,
+  jumps:0,
+  maxJumps:2,
+  coins:0
 };
 
 let keys = {};
-let platforms = [];
-let enemies = [];
-
-for (let i = 0; i < 20; i++) {
-  platforms.push({
-    x: i * 200,
-    y: 400 + Math.sin(i) * 100,
-    w: 180,
-    h: 20
-  });
-}
-
-for (let i = 0; i < 10; i++) {
-  enemies.push({
-    x: i * 300 + 200,
-    y: 350,
-    w: 40,
-    h: 40,
-    vx: 2,
-    alive: true
-  });
-}
-
 let cameraX = 0;
 let state = "start";
 
-window.addEventListener("keydown", function(e) {
-  keys[e.code] = true;
-
-  if (state === "start" && e.code === "Enter") {
-    state = "game";
-  }
-
-  if (state === "gameover" && e.code === "Enter") {
-    location.reload();
-  }
-});
-
-window.addEventListener("keyup", function(e) {
-  keys[e.code] = false;
-});
-
-function update() {
-
-  if (state !== "game") return;
-
-  player.vx = 0;
-
-  if (keys["ArrowRight"]) player.vx = 5;
-  if (keys["ArrowLeft"]) player.vx = -5;
-
-  if (keys["Space"]) {
-    if (player.jumps < player.maxJumps) {
-      player.vy = player.jump;
-      player.jumps++;
-      keys["Space"] = false;
-    }
-  }
-
-  player.vy += player.gravity;
-
-  player.x += player.vx;
-  player.y += player.vy;
-
-  player.grounded = false;
-
-  platforms.forEach(function(p) {
-    if (
-      player.x < p.x + p.w &&
-      player.x + player.w > p.x &&
-      player.y < p.y + p.h &&
-      player.y + player.h > p.y
-    ) {
-      if (player.vy > 0) {
-        player.y = p.y - player.h;
-        player.vy = 0;
-        player.grounded = true;
-        player.jumps = 0;
-      }
-    }
+let platforms = [];
+for(let i=0;i<50;i++){
+  platforms.push({
+    x:i220,
+    y:400 + Math.sin(i)120,
+    w:200,
+    h:40
   });
-
-  enemies.forEach(function(e) {
-    if (!e.alive) return;
-
-    e.x += e.vx;
-
-    if (
-      player.x < e.x + e.w &&
-      player.x + player.w > e.x &&
-      player.y < e.y + e.h &&
-      player.y + player.h > e.y
-    ) {
-      if (player.vy > 0) {
-        e.alive = false;
-        player.vy = -10;
-      } else {
-        state = "gameover";
-      }
-    }
-  });
-
-  if (player.y > canvas.height) {
-    state = "gameover";
-  }
-
-  cameraX = player.x - canvas.width / 2;
 }
 
-function draw() {
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (state === "start") {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = "white";
-    ctx.font = "40px Arial";
-    ctx.fillText("CYBER MARIO", canvas.width / 2 - 140, canvas.height / 2 - 40);
-    ctx.fillText("ENTER - START", canvas.width / 2 - 140, canvas.height / 2 + 20);
-    return;
-  }
-
-  ctx.fillStyle = "purple";
-  platforms.forEach(function(p) {
-    ctx.fillRect(p.x - cameraX, p.y, p.w, p.h);
+let coins = [];
+for(let i=0;i<30;i++){
+  coins.push({
+    x:i300+150,
+    y:250,
+    size:32,
+    taken:false
   });
+}
 
-  ctx.fillStyle = "red";
-  enemies.forEach(function(e) {
-    if (e.alive) {
-      ctx.fillRect(e.x - cameraX, e.y, e.w, e.h);
-    }
+let enemies = [];
+for(let i=0;i<20;i++){
+  enemies.push({
+    x:i400+200,
+    y:350,
+    w:50,
+    h:50,
+    vx:1,
+    alive:true
   });
+}
 
-  ctx.fillStyle = "cyan";
-  ctx.fillRect(player.x - cameraX, player.y, player.w, player.h);
+window.addEventListener("keydown", e=>{
+  keys[e.code]=true;
 
-  if (state === "gameover") {
-    ctx.fillStyle = "red";
-    ctx.font = "50px Arial";
-    ctx.fillText("GAME OVER", canvas.width / 2 - 150, canvas.height / 2);
+  if(state==="start" && e.code==="Enter") state="game";
+  if(state==="gameover" && e.code==="Enter") location.reload();
+});
+
+window.addEventListener("keyup", e=>{
+  keys[e.code]=false;
+});
+
+function update(){
+
+if(state!=="game") return;
+
+player.vx = 0;
+
+if(keys["ArrowRight"]){ player.vx=6; player.dir=1; }
+if(keys["ArrowLeft"]){ player.vx=-6; player.dir=-1; }
+
+if(keys["Space"]){
+  if(player.jumps < player.maxJumps){
+    player.vy = player.jump;
+    player.jumps++;
+    keys["Space"]=false;
   }
 }
 
-function loop() {
+player.vy += player.gravity;
+player.x += player.vx;
+player.y += player.vy;
+
+player.grounded=false;
+
+platforms.forEach(p=>{
+  if(
+    player.x < p.x+p.w &&
+    player.x+player.w > p.x &&
+    player.y < p.y+p.h &&
+    player.y+player.h > p.y
+  ){
+    if(player.vy > 0){
+      player.y = p.y - player.h;
+      player.vy = 0;
+      player.grounded = true;
+      player.jumps = 0;
+    }
+  }
+});
+
+coins.forEach(c=>{
+  if(!c.taken &&
+    player.x < c.x+c.size &&
+    player.x+player.w > c.x &&
+    player.y < c.y+c.size &&
+    player.y+player.h > c.y
+  ){
+    c.taken=true;
+    player.coins++;
+  }
+});
+
+enemies.forEach(e=>{
+  if(!e.alive) return;
+
+  e.x += e.vx;
+
+  if(
+    player.x < e.x+e.w &&
+    player.x+player.w > e.x &&
+    player.y < e.y+e.h &&
+    player.y+player.h > e.y
+  ){
+    if(player.vy > 0){
+      e.alive=false;
+      player.vy=-10;
+    } else {
+      state="gameover";
+    }
+  }
+});
+
+if(player.y > canvas.height) state="gameover";
+
+cameraX = player.x - canvas.width/2;
+}
+
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+if(state==="start"){
+  ctx.fillStyle="black";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle="white";
+  ctx.font="50px Arial";
+  ctx.fillText("CYBER MARIO", canvas.width/2-180, canvas.height/2-50);
+
+  ctx.font="25px Arial";
+  ctx.fillText("ENTER TO START", canvas.width/2-140, canvas.height/2+20);
+  return;
+}
+
+bg.forEach((b,i)=>{
+  ctx.drawImage(b, -cameraX*(0.2+i0.3), 0, canvas.width2, canvas.height);
+});
+
+platforms.forEach(p=>{
+  ctx.drawImage(platformImg, p.x-cameraX, p.y, p.w, p.h);
+});
+
+coins.forEach(c=>{
+  if(!c.taken){
+    ctx.drawImage(coinImg, c.x-cameraX, c.y, c.size, c.size);
+  }
+});
+
+enemies.forEach(e=>{
+  if(e.alive){
+    ctx.drawImage(enemyImg, e.x-cameraX, e.y, e.w, e.h);
+  }
+});
+
+let img = sprites.idle;
+
+if(!player.grounded){
+  img = player.vy < 0 ? sprites.jump : sprites.fall;
+}
+else if(player.vx !== 0){
+  player.frame += 0.15;
+  img = sprites.run[Math.floor(player.frame) % sprites.run.length];
+}
+
+ctx.save();
+
+if(player.dir === -1){
+  ctx.scale(-1,1);
+  ctx.drawImage(img, -(player.x-cameraX)-player.w, player.y, player.w, player.h);
+} else {
+  ctx.drawImage(img, player.x-cameraX, player.y, player.w, player.h);
+}
+
+ctx.restore();
+
+ctx.fillStyle="white";
+ctx.font="20px Arial";
+ctx.fillText("Coins: " + player.coins, 20, 30);
+
+if(state==="gameover"){
+  ctx.fillStyle="red";
+  ctx.font="50px Arial";
+  ctx.fillText("GAME OVER", canvas.width/2-150, canvas.height/2);
+}
+
+}
+
+function loop(){
   update();
   draw();
   requestAnimationFrame(loop);
@@ -192,6 +273,7 @@ function loop() {
 
 loop();
 
+})();
 };
 </script>
 
