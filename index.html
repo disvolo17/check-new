@@ -20,19 +20,43 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 // ===== ЗАГРУЗКА =====
-const img = src => { let i=new Image(); i.src=src; return i; }
+function loadImage(src){
+  return new Promise(res=>{
+    const img = new Image();
+    img.src = "./" + src;
+    img.onload = ()=>res(img);
+    img.onerror = ()=>{
+      console.warn("Не загрузилось:", src);
+      res(img);
+    }
+  });
+}
 
+// ===== ИГРА =====
+async function start(){
+
+// загрузка
 const sprites = {
-  idle: img("idle.png"),
-  run: [img("run1.png"), img("run2.png"), img("run3.png"), img("run.png")],
-  jump: img("jump.png"),
-  fall: img("fall.png")
+  idle: await loadImage("idle.png"),
+  run: [
+    await loadImage("run1.png"),
+    await loadImage("run2.png"),
+    await loadImage("run3.png"),
+    await loadImage("run.png")
+  ],
+  jump: await loadImage("jump.png"),
+  fall: await loadImage("fall.png")
 };
 
-const bg = [img("bg1.png"), img("bg2.png"), img("bg3.png")];
-const coinImg = img("coin.png");
-const enemyImg = img("enemy.png");
-const platformImg = img("platform.png");
+const bg = [
+  await loadImage("bg1.png"),
+  await loadImage("bg2.png"),
+  await loadImage("bg3.png")
+];
+
+const coinImg = await loadImage("coin.png");
+const enemyImg = await loadImage("enemy.png");
+const platformImg = await loadImage("platform.png");
 
 // ===== ИГРОК =====
 const player = {
@@ -51,36 +75,31 @@ const player = {
 };
 
 let keys = {};
+onkeydown = e => keys[e.key.toLowerCase()] = true;
+onkeyup = e => keys[e.key.toLowerCase()] = false;
 
 // ===== МИР =====
 let gravity = 0.8;
 let cameraX = 0;
 let score = 0;
 
-// платформы
 const platforms = [
-  {x:0,y:500,w:2000,h:50},
+  {x:0,y:500,w:3000,h:50},
   {x:300,y:400,w:200,h:20},
   {x:700,y:350,w:200,h:20},
   {x:1100,y:300,w:200,h:20},
 ];
 
-// монеты
 let coins = [
   {x:350,y:350},
   {x:750,y:300},
   {x:1150,y:250}
 ];
 
-// враги
 let enemies = [
   {x:600,y:460,w:50,h:50,vx:2,alive:true},
   {x:1000,y:460,w:50,h:50,vx:-2,alive:true}
 ];
-
-// ===== УПРАВЛЕНИЕ =====
-onkeydown = e => keys[e.key]=true;
-onkeyup = e => keys[e.key]=false;
 
 // ===== ФИЗИКА =====
 function update(){
@@ -97,12 +116,12 @@ function update(){
   }
 
   player.vy += gravity;
-
   player.x += player.vx;
   player.y += player.vy;
 
-  // коллизия платформ
+  // коллизии платформ
   player.grounded = false;
+
   platforms.forEach(p=>{
     if(player.x < p.x+p.w &&
        player.x+player.w > p.x &&
@@ -130,21 +149,19 @@ function update(){
 
     e.x += e.vx;
 
-    if(e.x < 0 || e.x > 2000) e.vx *= -1;
+    if(e.x < 0 || e.x > 3000) e.vx *= -1;
 
-    // столкновение
     if(player.x < e.x+e.w &&
        player.x+player.w > e.x &&
        player.y < e.y+e.h &&
        player.y+player.h > e.y){
 
-        // прыжок сверху = убийство
         if(player.vy > 0 && player.y < e.y){
           e.alive = false;
           player.vy = -10;
         } else {
           player.hp--;
-          player.x -= 50;
+          player.x -= 60;
         }
     }
   });
@@ -155,7 +172,6 @@ function update(){
     location.reload();
   }
 
-  // камера
   cameraX = player.x - 200;
 }
 
@@ -164,7 +180,7 @@ function draw(){
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  // параллакс
+  // фон (параллакс)
   bg.forEach((b,i)=>{
     let speed = [0.2,0.5,0.8][i];
     let x = -cameraX * speed % canvas.width;
@@ -189,14 +205,14 @@ function draw(){
       ctx.drawImage(enemyImg, e.x-cameraX, e.y, e.w, e.h);
   });
 
-  // выбор спрайта
+  // анимация игрока
   let sprite = sprites.idle;
 
   if(!player.grounded){
     sprite = player.vy < 0 ? sprites.jump : sprites.fall;
   } else if(Math.abs(player.vx)>1){
     player.tick++;
-    if(player.tick%10==0)
+    if(player.tick%8===0)
       player.frame = (player.frame+1)%sprites.run.length;
 
     sprite = sprites.run[player.frame];
@@ -220,6 +236,10 @@ function loop(){
 
 loop();
 
+}
+
+start();
 </script>
+
 </body>
 </html>
