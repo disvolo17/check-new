@@ -1,46 +1,27 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<title>Cyber Mario</title>
-
-<style>
-body { margin:0; overflow:hidden; background:black; }
-canvas { display:block; }
-</style>
-
-</head>
-<body>
-
-<canvas id="game"></canvas>
-
 <script>
 window.addEventListener("load", () => {
 
 // ===== CANVAS =====
 const canvas = document.getElementById("game");
-if (!canvas) {
-  alert("canvas НЕ найден");
-  throw new Error("Canvas not found");
-}
+if (!canvas) throw new Error("Canvas not found");
 
 const ctx = canvas.getContext("2d");
-
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// ===== ЗАГРУЗКА КАРТИНОК =====
+// ===== LOAD IMAGES =====
 function load(src){
   return new Promise(resolve=>{
     const img = new Image();
     img.src = src;
     img.onload = ()=>resolve(img);
+    img.onerror = ()=>resolve(null);
   });
 }
 
 (async function(){
 
-// ===== СПРАЙТЫ =====
+// ===== SPRITES =====
 const sprites = {
   idle: await load("idle.png"),
   jump: await load("jump.png"),
@@ -58,7 +39,7 @@ const platformImg = await load("platform.png");
 const coinImg = await load("coin.png");
 const enemyImg = await load("enemy.png");
 
-// ===== ИГРОК =====
+// ===== PLAYER =====
 let player = {
   x:100,
   y:100,
@@ -76,38 +57,35 @@ let player = {
   coins:0
 };
 
-// ===== УПРАВЛЕНИЕ =====
 let keys = {};
 let cameraX = 0;
 let state = "start";
 
-// ===== ПЛАТФОРМЫ =====
+// ===== WORLD =====
 let platforms = [];
-for(let i=0;i<50;i++){
+for(let i=0;i<40;i++){
   platforms.push({
-    x:i220,
-    y:400 + Math.sin(i)120,
+    x:i*220,
+    y:400 + Math.sin(i)*120,
     w:200,
     h:40
   });
 }
 
-// ===== МОНЕТЫ =====
 let coins = [];
-for(let i=0;i<30;i++){
+for(let i=0;i<25;i++){
   coins.push({
-    x:i300+150,
+    x:i*300+150,
     y:250,
     size:32,
     taken:false
   });
 }
 
-// ===== ВРАГИ =====
 let enemies = [];
-for(let i=0;i<20;i++){
+for(let i=0;i<15;i++){
   enemies.push({
-    x:i400+200,
+    x:i*400+200,
     y:350,
     w:50,
     h:50,
@@ -116,7 +94,7 @@ for(let i=0;i<20;i++){
   });
 }
 
-// ===== СОБЫТИЯ =====
+// ===== INPUT =====
 window.addEventListener("keydown", e=>{
   keys[e.code]=true;
 
@@ -128,7 +106,7 @@ window.addEventListener("keyup", e=>{
   keys[e.code]=false;
 });
 
-// ===== ЛОГИКА =====
+// ===== UPDATE =====
 function update(){
 
 if(state!=="game") return;
@@ -152,6 +130,7 @@ player.y += player.vy;
 
 player.grounded=false;
 
+// collisions platforms
 platforms.forEach(p=>{
   if(
     player.x < p.x+p.w &&
@@ -168,7 +147,7 @@ platforms.forEach(p=>{
   }
 });
 
-// монеты
+// coins
 coins.forEach(c=>{
   if(!c.taken &&
     player.x < c.x+c.size &&
@@ -181,7 +160,7 @@ coins.forEach(c=>{
   }
 });
 
-// враги
+// enemies
 enemies.forEach(e=>{
   if(!e.alive) return;
 
@@ -202,17 +181,18 @@ enemies.forEach(e=>{
   }
 });
 
+// fall death
 if(player.y > canvas.height) state="gameover";
 
 cameraX = player.x - canvas.width/2;
 }
 
-// ===== РЕНДЕР =====
+// ===== DRAW =====
 function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
-// старт экран
+// START SCREEN
 if(state==="start"){
   ctx.fillStyle="black";
   ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -226,29 +206,46 @@ if(state==="start"){
   return;
 }
 
-// фон
-ctx.drawImage(bg, -cameraX0.3, 0, canvas.width2, canvas.height);
+// BACKGROUND
+if(bg){
+  ctx.drawImage(bg, -cameraX*0.3, 0, canvas.width*2, canvas.height);
+}
 
-// платформы
+// PLATFORMS
 platforms.forEach(p=>{
-  ctx.drawImage(platformImg, p.x-cameraX, p.y, p.w, p.h);
+  if(platformImg){
+    ctx.drawImage(platformImg, p.x-cameraX, p.y, p.w, p.h);
+  } else {
+    ctx.fillStyle="gray";
+    ctx.fillRect(p.x-cameraX, p.y, p.w, p.h);
+  }
 });
 
-// монеты
+// COINS
 coins.forEach(c=>{
   if(!c.taken){
-    ctx.drawImage(coinImg, c.x-cameraX, c.y, c.size, c.size);
+    if(coinImg){
+      ctx.drawImage(coinImg, c.x-cameraX, c.y, c.size, c.size);
+    } else {
+      ctx.fillStyle="yellow";
+      ctx.fillRect(c.x-cameraX, c.y, c.size, c.size);
+    }
   }
 });
 
-// враги
+// ENEMIES
 enemies.forEach(e=>{
   if(e.alive){
-    ctx.drawImage(enemyImg, e.x-cameraX, e.y, e.w, e.h);
+    if(enemyImg){
+      ctx.drawImage(enemyImg, e.x-cameraX, e.y, e.w, e.h);
+    } else {
+      ctx.fillStyle="red";
+      ctx.fillRect(e.x-cameraX, e.y, e.w, e.h);
+    }
   }
 });
 
-// анимация игрока
+// PLAYER
 let img = sprites.idle;
 
 if(!player.grounded){
@@ -263,9 +260,19 @@ ctx.save();
 
 if(player.dir === -1){
   ctx.scale(-1,1);
-  ctx.drawImage(img, -(player.x-cameraX)-player.w, player.y, player.w, player.h);
+  if(img){
+    ctx.drawImage(img, -(player.x-cameraX)-player.w, player.y, player.w, player.h);
+  } else {
+    ctx.fillStyle="cyan";
+    ctx.fillRect(-(player.x-cameraX)-player.w, player.y, player.w, player.h);
+  }
 } else {
-  ctx.drawImage(img, player.x-cameraX, player.y, player.w, player.h);
+  if(img){
+    ctx.drawImage(img, player.x-cameraX, player.y, player.w, player.h);
+  } else {
+    ctx.fillStyle="cyan";
+    ctx.fillRect(player.x-cameraX, player.y, player.w, player.h);
+  }
 }
 
 ctx.restore();
@@ -296,6 +303,3 @@ loop();
 })();
 });
 </script>
-
-</body>
-</html>
