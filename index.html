@@ -3,265 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Disvolo17 - Light Up Style Portfolio</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;600&display=swap" rel="stylesheet">
+    <title>Disvolo17 - Cyberpunk Platformer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-top: #0a0a12;
-            --bg-bottom: #1e1e3f;
-            --accent-glow: #00f2ff; /* Неоновый голубой как в Light Up */
-            --player-color: #0d0d0d;
+            --neon-pink: #ff00ff;
+            --neon-blue: #00f2ff;
+            --bg-dark: #050510;
         }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg-dark); overflow: hidden; font-family: 'Orbitron', sans-serif; }
+        #game-container { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+        canvas { display: block; image-rendering: pixelated; }
 
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            background: #000; overflow: hidden; touch-action: none;
-            font-family: 'Outfit', sans-serif;
-        }
+        /* HUD */
+        .ui { position: absolute; top: 20px; left: 20px; color: var(--neon-blue); pointer-events: none; z-index: 10; text-shadow: 0 0 10px var(--neon-blue); }
+        .score { font-size: 24px; font-weight: bold; }
 
-        #game-wrapper {
-            position: relative; width: 100vw; height: 100vh;
-            background: linear-gradient(180deg, var(--bg-top) 0%, #3a1c5d 100%);
-            overflow: hidden;
-        }
-
-        /* Эффект виньетки для глубины */
-        #game-wrapper::after {
-            content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.4) 100%);
-            pointer-events: none;
-        }
-
-        canvas { display: block; image-rendering: auto; }
-
-        /* ИНТЕРФЕЙС В СТИЛЕ МИНИМАЛИЗМА */
-        .ui-overlay {
-            position: absolute; top: 30px; left: 30px; right: 30px;
-            color: white; pointer-events: none; z-index: 100;
-            display: flex; justify-content: space-between; align-items: flex-start;
-        }
-        .brand { font-weight: 600; letter-spacing: 2px; font-size: 18px; text-transform: uppercase; }
-        .brand span { font-weight: 300; opacity: 0.6; font-size: 12px; display: block; }
-
-        .resume-modal {
+        /* Модальное окно в стиле "High-Tech" */
+        .modal {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(10, 10, 20, 0.9); border: 1px solid rgba(0, 242, 255, 0.3);
-            padding: 40px; color: white; display: none; z-index: 200;
-            width: 80%; max-width: 500px; text-align: center;
-            backdrop-filter: blur(15px); border-radius: 20px;
-            box-shadow: 0 0 50px rgba(0, 242, 255, 0.1);
+            background: rgba(5, 5, 20, 0.9); border: 2px solid var(--neon-pink);
+            padding: 30px; color: white; display: none; z-index: 100;
+            width: 320px; text-align: center; border-radius: 5px;
+            box-shadow: 0 0 30px var(--neon-pink); backdrop-filter: blur(10px);
         }
-        .resume-modal h2 { color: var(--accent-glow); margin-top: 0; font-weight: 600; }
-        .resume-modal p { opacity: 0.8; line-height: 1.6; font-size: 18px; }
-
-        /* УПРАВЛЕНИЕ */
-        .mobile-controls {
-            position: absolute; bottom: 40px; left: 0; width: 100%;
-            display: flex; justify-content: space-between; padding: 0 40px;
-            box-sizing: border-box; z-index: 150;
-        }
-        .btn {
-            width: 70px; height: 70px; border-radius: 50%;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-            color: white; display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(5px); font-size: 24px;
-        }
-        #btn-jump { background: rgba(0, 242, 255, 0.1); border-color: var(--accent-glow); width: 85px; height: 85px; }
+        .modal h2 { color: var(--neon-pink); margin-bottom: 15px; }
+        
+        /* Кнопки управления */
+        .controls { position: absolute; bottom: 30px; left: 0; width: 100%; display: flex; justify-content: space-around; z-index: 20; }
+        .btn { width: 70px; height: 70px; background: rgba(0, 242, 255, 0.1); border: 2px solid var(--neon-blue); border-radius: 50%; color: var(--neon-blue); display: flex; align-items: center; justify-content: center; font-size: 24px; }
     </style>
 </head>
 <body>
 
-<div id="game-wrapper">
-    <div class="ui-overlay">
-        <div class="brand">Disvolo17 <span>Creative Developer // Dubai 2026</span></div>
-        <div class="stats" id="progress-text">Level Progress: 0%</div>
+<div id="game-container">
+    <div class="ui">
+        <div class="score">XP: 2500</div>
+        <div style="font-size: 12px; opacity: 0.7;">LEVEL: NEON DUBAI</div>
     </div>
 
-    <div id="resume-modal" class="resume-modal">
-        <h2 id="modal-title"></h2>
-        <p id="modal-body"></p>
-        <div style="font-size: 12px; opacity: 0.4; margin-top: 20px;">[ TAP TO CONTINUE ]</div>
+    <div id="modal" class="modal">
+        <h2 id="m-title">DATA LINK</h2>
+        <p id="m-body"></p>
+        <button onclick="closeModal()" style="background: var(--neon-pink); border: none; padding: 10px 20px; color: white; cursor: pointer;">CLOSE</button>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
+    <canvas id="canvas"></canvas>
 
-    <div class="mobile-controls">
-        <div style="display: flex; gap: 20px;">
-            <div class="btn" id="left-btn">←</div>
-            <div class="btn" id="right-btn">→</div>
+    <div class="controls">
+        <div style="display:flex; gap:20px;">
+            <div class="btn" id="l-btn">←</div>
+            <div class="btn" id="r-btn">→</div>
         </div>
-        <div class="btn" id="btn-jump">↑</div>
+        <div class="btn" id="j-btn">UP</div>
     </div>
 </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
+const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 let cw, ch;
 
-const CONFIG = {
-    gravity: 0.6,
-    jump: -15,
-    speed: 5,
-    accent: '#00f2ff',
-    playerColor: '#0a0a0a'
+// Данные из твоего резюме
+const DATA = {
+    exp: { t: "ОПЫТ РАБОТЫ", b: "Фриланс-разработчик (2 года). Создание игр и интерфейсов на JS/React." },
+    skills: { t: "SKILLS", b: "HTML5, CSS3, JS, React, Vue.js, Prompt Engineering." },
+    contact: { t: "СВЯЗАТЬСЯ", b: "GitHub: disvolo17. Создаю интерактивные цифровые миры." }
 };
 
 const state = {
-    cameraX: 0,
-    activeModal: false,
-    particles: []
+    camX: 0,
+    modalOpen: false,
+    keys: { l: false, r: false, j: false }
 };
 
 const player = {
-    x: 100, y: 0, w: 30, h: 50,
-    vx: 0, vy: 0, grounded: false,
-    trail: []
+    x: 100, y: 0, w: 32, h: 48, vx: 0, vy: 0, 
+    speed: 6, jump: -15, grounded: false
 };
 
-const world = {
-    platforms: [
-        {x: 0, y: 0, w: 5000, h: 80, isGround: true}, // Пол
-        {x: 400, y: 350, w: 150, h: 20, data: {t: "Work", b: "Freelance Dev @ 2024-2026"}},
-        {x: 700, y: 220, w: 180, h: 20, data: {t: "Skills", b: "React, Canvas, GSAP, UI/UX"}},
-        {x: 1100, y: 380, w: 200, h: 20, data: {t: "Contact", b: "Telegram: @disvolo17"}}
-    ]
+const objects = {
+    platforms: [],
+    bgElements: [] // Для параллакса
 };
 
 function init() {
     cw = canvas.width = window.innerWidth;
     ch = canvas.height = window.innerHeight;
-    player.y = ch - 150;
-    
-    // Подстройка высоты платформ под экран
-    world.platforms.forEach(p => {
-        if(p.isGround) p.y = ch - 80;
-        else p.y = ch - p.y;
-    });
+    player.y = ch - 200;
+
+    // Создаем параллакс фон (башни)
+    for(let i=0; i<20; i++) {
+        objects.bgElements.push({
+            x: i * 300, y: ch - 500, w: 150, h: 500, 
+            layer: Math.random() * 0.5, // Скорость движения
+            color: `rgba(20, 20, 60, ${Math.random() * 0.5})`
+        });
+    }
+
+    // Уровень
+    objects.platforms.push({x: 0, y: ch - 60, w: 5000, h: 60, type: 'floor'}); // Пол
+    objects.platforms.push({x: 400, y: ch - 200, w: 150, h: 20, data: DATA.exp});
+    objects.platforms.push({x: 750, y: ch - 350, w: 150, h: 20, data: DATA.skills});
+    objects.platforms.push({x: 1200, y: ch - 250, w: 200, h: 20, data: DATA.contact});
 
     loop();
 }
 
 function update() {
-    if(state.activeModal) return;
+    if(state.modalOpen) return;
 
-    // Движение
-    if(keys.left) player.vx = -CONFIG.speed;
-    else if(keys.right) player.vx = CONFIG.speed;
+    // Физика
+    if(state.keys.l) player.vx = -player.speed;
+    else if(state.keys.r) player.vx = player.speed;
     else player.vx *= 0.8;
 
-    if(keys.jump && player.grounded) {
-        player.vy = CONFIG.jump;
+    if(state.keys.j && player.grounded) {
+        player.vy = player.jump;
         player.grounded = false;
     }
 
-    player.vy += CONFIG.gravity;
+    player.vy += 0.8; // Гравитация
     player.x += player.vx;
     player.y += player.vy;
 
     // Камера
-    state.cameraX += (player.x - state.cameraX - cw/3) * 0.1;
+    state.camX += (player.x - state.camX - cw/3) * 0.1;
 
     // Коллизии
     player.grounded = false;
-    world.platforms.forEach(p => {
+    objects.platforms.forEach(p => {
         if(player.x < p.x + p.w && player.x + player.w > p.x &&
            player.y + player.h > p.y && player.y < p.y + p.h) {
             if(player.vy > 0) {
                 player.y = p.y - player.h;
                 player.vy = 0;
                 player.grounded = true;
-                if(p.data) showModal(p.data);
+                if(p.data && !p.hit) {
+                    showModal(p.data);
+                    p.hit = true;
+                }
             }
         }
     });
 
-    // Шлейф (Trail)
-    player.trail.push({x: player.x, y: player.y, alpha: 0.5});
-    if(player.trail.length > 10) player.trail.shift();
+    if(player.y > ch) { player.x = 100; player.y = ch-200; } // Респаун
 }
 
 function draw() {
-    ctx.clearRect(0, 0, cw, ch);
-
-    // 1. Отрисовка Фона (Свет в центре)
-    let bgGrad = ctx.createRadialGradient(cw/2, ch/2, 0, cw/2, ch/2, cw);
-    bgGrad.addColorStop(0, '#2a144d');
-    bgGrad.addColorStop(1, '#0a0a12');
-    ctx.fillStyle = bgGrad;
+    ctx.fillStyle = '#050510';
     ctx.fillRect(0, 0, cw, ch);
 
+    // 1. Параллакс фон
+    objects.bgElements.forEach(el => {
+        ctx.fillStyle = el.color;
+        ctx.fillRect(el.x - state.camX * el.layer, el.y, el.w, el.h);
+        // Окошки в зданиях
+        ctx.fillStyle = 'rgba(0, 242, 255, 0.1)';
+        ctx.fillRect(el.x - state.camX * el.layer + 20, el.y + 50, 20, 20);
+    });
+
     ctx.save();
-    ctx.translate(-state.cameraX, 0);
+    ctx.translate(-state.camX, 0);
 
-    // 2. Платформы (Минимализм + Глоу по краям)
-    world.platforms.forEach(p => {
-        ctx.fillStyle = '#050505';
+    // 2. Платформы (Киберпанк-стиль)
+    objects.platforms.forEach(p => {
+        // Тело платформы
+        ctx.fillStyle = 'rgba(0, 242, 255, 0.05)';
         ctx.fillRect(p.x, p.y, p.w, p.h);
-        
-        // Линия света сверху платформы
-        ctx.strokeStyle = CONFIG.accent;
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.3;
-        ctx.strokeRect(p.x, p.y, p.w, 1);
-        ctx.globalAlpha = 1.0;
+        // Неоновая грань
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#00f2ff';
+        ctx.strokeStyle = '#00f2ff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x, p.y, p.w, p.h);
+        ctx.shadowBlur = 0;
     });
 
-    // 3. Эффект шлейфа игрока
-    player.trail.forEach((t, i) => {
-        ctx.fillStyle = CONFIG.accent;
-        ctx.globalAlpha = (i / 10) * 0.2;
-        ctx.fillRect(t.x, t.y, player.w, player.h);
-    });
-
-    // 4. Игрок (Темный силуэт с неоновым контуром)
-    ctx.shadowColor = CONFIG.accent;
-    ctx.shadowBlur = 15;
+    // 3. Игрок (Темный силуэт с контуром)
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#ff00ff';
     ctx.fillStyle = '#000';
     ctx.fillRect(player.x, player.y, player.w, player.h);
-    
-    // Внутренний свет игрока (как в Light Up)
-    ctx.shadowBlur = 5;
-    ctx.strokeStyle = CONFIG.accent;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(player.x + 5, player.y + 5, player.w - 10, player.h - 10);
+    ctx.strokeStyle = '#ff00ff';
+    ctx.strokeRect(player.x, player.y, player.w, player.h);
     ctx.shadowBlur = 0;
 
     ctx.restore();
 }
 
-// УПРАВЛЕНИЕ
-const keys = {left: false, right: false, jump: false};
-const setupBtns = (id, key) => {
-    const el = document.getElementById(id);
-    const start = (e) => { e.preventDefault(); keys[key] = true; if(state.activeModal) closeModal(); };
-    const end = (e) => { e.preventDefault(); keys[key] = false; };
-    el.addEventListener('touchstart', start); el.addEventListener('touchend', end);
-    el.addEventListener('mousedown', start); el.addEventListener('mouseup', end);
-};
-setupBtns('left-btn', 'left'); setupBtns('right-btn', 'right'); setupBtns('btn-jump', 'jump');
+function loop() { update(); draw(); requestAnimationFrame(loop); }
 
 function showModal(data) {
-    state.activeModal = true;
-    document.getElementById('modal-title').innerText = data.t;
-    document.getElementById('modal-body').innerText = data.b;
-    document.getElementById('resume-modal').style.display = 'block';
+    state.modalOpen = true;
+    document.getElementById('m-title').innerText = data.t;
+    document.getElementById('m-body').innerText = data.b;
+    document.getElementById('modal').style.display = 'block';
 }
 
 function closeModal() {
-    state.activeModal = false;
-    document.getElementById('resume-modal').style.display = 'none';
+    state.modalOpen = false;
+    document.getElementById('modal').style.display = 'none';
 }
 
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
+// Управление
+const bind = (id, k) => {
+    const el = document.getElementById(id);
+    el.onmousedown = el.ontouchstart = (e) => { e.preventDefault(); state.keys[k] = true; };
+    el.onmouseup = el.ontouchend = (e) => { e.preventDefault(); state.keys[k] = false; };
+};
+bind('l-btn', 'l'); bind('r-btn', 'r'); bind('j-btn', 'j');
 
 window.onload = init;
-window.onresize = () => { cw=canvas.width=window.innerWidth; ch=canvas.height=window.innerHeight; };
 </script>
-
 </body>
 </html>
