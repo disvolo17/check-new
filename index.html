@@ -3,393 +3,630 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Disvolo17 Resume Game - Reference Edition</title>
+    <title>Premium Pixel Resume</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
         :root {
-            --mario-sky: #5c94fc;
-            --pixel-font: 'Press Start 2P', cursive;
+            --sky-top: #6bb0ff;
+            --sky-bottom: #9ad0ff;
+            --font-hud: 'Press Start 2P', cursive;
+            --font-text: 'VT323', monospace;
         }
 
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            background: #000; overflow: hidden; touch-action: none;
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: #111; display: flex; justify-content: center; align-items: center;
+            overflow: hidden; touch-action: none;
         }
 
-        #game-container {
+        #device-screen {
             position: relative;
             width: 100vw;
             height: 100vh;
-            max-width: 500px; /* Вертикальный формат как на скриншоте */
-            margin: 0 auto;
-            background: var(--mario-sky);
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            max-width: 600px;
+            max-height: 900px;
+            background: linear-gradient(to bottom, var(--sky-top) 0%, var(--sky-bottom) 100%);
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
 
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            image-rendering: pixelated;
-        }
-
-        /* Overlay UI - Верхняя панель */
-        .top-hud {
+        /* --- СТАТИЧНЫЙ ФОН --- */
+        .cloud {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            font-family: var(--pixel-font);
-            color: white;
-            font-size: 10px;
-            text-shadow: 2px 2px #000;
-            pointer-events: none;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 5px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+        }
+        .cloud::before, .cloud::after {
+            content: ''; position: absolute; background: white; border-radius: 50%;
+        }
+        .c1 { width: 100px; height: 30px; top: 12%; left: 5%; }
+        .c1::before { width: 50px; height: 50px; top: -20px; left: 15px; }
+        .c1::after { width: 40px; height: 40px; top: -10px; right: 15px; }
+        
+        .c2 { width: 120px; height: 40px; top: 10%; right: -5%; }
+        .c2::before { width: 60px; height: 60px; top: -30px; left: 20px; }
+        .c2::after { width: 50px; height: 50px; top: -15px; right: 20px; }
+
+        .hill {
+            position: absolute; bottom: 15%;
+            background: #48b048;
+            border: 4px solid #000;
+            border-bottom: none;
+            border-radius: 50% 50% 0 0;
+            z-index: 1;
+        }
+        .hill-large { width: 300px; height: 250px; left: -50px; }
+        .hill-small { width: 180px; height: 120px; right: 100px; bottom: 15%; z-index: 0; }
+        
+        .hill-spot {
+            position: absolute; background: #000; width: 6px; height: 6px; border-radius: 50%;
         }
 
+        .pipe {
+            position: absolute; bottom: 15%; left: 5%; width: 80px; height: 120px;
+            background: #50c848; border: 4px solid #000; z-index: 2;
+            box-shadow: inset -15px 0 0 rgba(0,0,0,0.2), inset 10px 0 0 rgba(255,255,255,0.4);
+        }
+        .pipe-top {
+            position: absolute; top: -20px; left: -10px; width: 100px; height: 40px;
+            background: #50c848; border: 4px solid #000;
+            box-shadow: inset -15px 0 0 rgba(0,0,0,0.2), inset 10px 0 0 rgba(255,255,255,0.4);
+        }
+
+        /* --- ГРАФИКА И КАНВАС --- */
+        #game-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; image-rendering: pixelated;
+        }
+
+        /* --- UI И ТЕКСТЫ --- */
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 20; pointer-events: none; }
+        
+        .hud {
+            padding: 15px; color: white; font-family: var(--font-hud); font-size: 14px;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 2px 0 0 #000, 0 -2px 0 #000, -2px 0 0 #000;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            line-height: 1.8;
+        }
+        
         .avatar-box {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 50px;
-            height: 50px;
-            border: 3px solid #fff;
-            background: #88ccee;
-            image-rendering: pixelated;
+            width: 64px; height: 64px; background: #cceeff; border: 4px solid #fff;
+            border-radius: 4px; box-shadow: 0 0 0 4px #000; position: relative;
         }
+        #avatar-canvas { width: 100%; height: 100%; image-rendering: pixelated; }
 
-        /* Диалоговое окно */
-        #dialog {
-            position: absolute;
-            top: 15%;
-            left: 5%;
-            right: 5%;
-            background: rgba(255, 255, 255, 0.95);
-            border: 4px solid #000;
-            padding: 15px;
-            font-family: var(--pixel-font);
-            font-size: 8px;
-            color: #000;
-            line-height: 1.6;
-            display: none;
-            z-index: 100;
-            text-align: center;
+        .text-block {
+            position: absolute; font-family: var(--font-text); text-align: center;
+            opacity: 0; transition: opacity 0.3s ease; text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
         }
+        .text-block.visible { opacity: 1; pointer-events: auto; }
+        
+        .main-title { font-size: 32px; font-weight: bold; color: #111; margin-bottom: 5px; }
+        .sub-title { font-size: 20px; color: #222; font-weight: bold; }
+        .list-text { font-size: 18px; color: #111; text-align: left; margin-top: 10px; line-height: 1.2;}
+        .close-hint { font-size: 16px; color: #000; margin-top: 10px; font-family: var(--font-hud); font-size: 8px;}
 
-        /* Кнопки управления (Mobile) */
-        .d-pad {
-            position: absolute;
-            bottom: 40px;
-            left: 20px;
-            width: 120px;
-            height: 120px;
+        #text-exp { top: 15%; left: 50%; transform: translateX(-50%); width: 90%; }
+        #text-skills { top: 50%; right: 5%; width: 140px; text-align: right; }
+        #text-contact { bottom: 20%; left: 50%; transform: translateX(-50%); text-align: center; }
+
+        /* --- МОБИЛЬНОЕ УПРАВЛЕНИЕ (ТОЧНАЯ КОПИЯ) --- */
+        #controls { position: absolute; bottom: 0; left: 0; width: 100%; height: 150px; z-index: 30; pointer-events: none; }
+        
+        .dpad {
+            position: absolute; bottom: 20px; left: 20px; width: 140px; height: 140px; pointer-events: auto;
         }
-
-        .action-btns {
-            position: absolute;
-            bottom: 40px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+        .dpad-cross {
+            position: absolute; background: #ddd; border: 6px solid #000; border-radius: 8px;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.2), 0 8px 0 rgba(0,0,0,0.5);
         }
+        .dpad-v { width: 46px; height: 100%; left: 47px; top: 0; }
+        .dpad-h { width: 100%; height: 46px; left: 0; top: 47px; }
+        .dpad-center { 
+            position: absolute; width: 30px; height: 30px; background: #aaa; 
+            border-radius: 50%; left: 55px; top: 55px; z-index: 5;
+        }
+        .dpad-arrow {
+            position: absolute; width: 0; height: 0; border-style: solid; z-index: 4;
+        }
+        .arr-u { border-width: 0 10px 15px 10px; border-color: transparent transparent #000 transparent; top: 15px; left: 60px; }
+        .arr-d { border-width: 15px 10px 0 10px; border-color: #000 transparent transparent transparent; bottom: 15px; left: 60px; }
+        .arr-l { border-width: 10px 15px 10px 0; border-color: transparent #000 transparent transparent; left: 15px; top: 60px; }
+        .arr-r { border-width: 10px 0 10px 15px; border-color: transparent transparent transparent #000; right: 15px; top: 60px; }
 
-        .btn-round {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: 4px solid #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: var(--pixel-font);
-            font-size: 20px;
-            color: #000;
-            box-shadow: inset -4px -4px rgba(0,0,0,0.2);
+        .action-btns { position: absolute; bottom: 30px; right: 20px; display: flex; gap: 15px; pointer-events: auto; }
+        .btn-ab {
+            width: 60px; height: 60px; border-radius: 50%; border: 6px solid #000;
+            display: flex; justify-content: center; align-items: center;
+            font-family: var(--font-hud); font-size: 24px; color: #000;
+            box-shadow: inset -5px -5px 0 rgba(0,0,0,0.3), 0 6px 0 rgba(0,0,0,0.5);
             cursor: pointer;
         }
+        .btn-b { background: #50c848; transform: translateY(20px); }
+        .btn-a { background: #e83030; }
+        .btn-ab:active { box-shadow: inset -2px -2px 0 rgba(0,0,0,0.3), 0 2px 0 rgba(0,0,0,0.5); transform: translateY(4px); }
+        .btn-b:active { transform: translateY(24px); }
+
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <div class="top-hud">
-        <div>RESUME PROGRESS: 40%</div>
-        <div style="text-align: right; padding-right: 60px;">LIVES: 3</div>
-        <div style="grid-column: span 2;">SCORE: 2500</div>
+<div id="device-screen">
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    
+    <div class="hill hill-large">
+        <div class="hill-spot" style="top: 40px; left: 80px;"></div>
+        <div class="hill-spot" style="top: 100px; left: 50px;"></div>
+        <div class="hill-spot" style="top: 70px; left: 200px;"></div>
+    </div>
+    <div class="hill hill-small">
+        <div class="hill-spot" style="top: 30px; left: 60px;"></div>
     </div>
     
-    <div class="avatar-box" id="avatar"></div>
+    <div class="pipe"><div class="pipe-top"></div></div>
 
-    <div id="dialog">
-        <h3 id="d-title" style="margin: 0 0 10px 0; font-size: 10px;"></h3>
-        <p id="d-text" style="margin: 0 0 10px 0;"></p>
-        <div style="font-size: 6px; color: #555;">[Пробел для закрытия]</div>
+    <canvas id="game-canvas"></canvas>
+
+    <div id="ui-layer">
+        <div class="hud">
+            <div>
+                RESUME PROGRESS: 40%<br>
+                SCORE: 2500
+            </div>
+            <div style="text-align: right; display: flex; gap: 10px; align-items: center;">
+                <div>LIVES: 3</div>
+                <div class="avatar-box"><canvas id="avatar-canvas"></canvas></div>
+            </div>
+        </div>
+
+        <div id="text-exp" class="text-block visible">
+            <div class="main-title">ОПЫТ РАБОТЫ</div>
+            <div class="sub-title">(WORK EXPERIENCE)</div>
+            <div class="list-text">
+                ФРИЛАНС-РАЗРАБОТЧИК (2 года)<br>
+                - Создание игр (HTML/CSS, JS)<br>
+                - Разработка интерфейсов
+            </div>
+            <div class="close-hint">[Пробел для закрытия]</div>
+        </div>
+
+        <div id="text-skills" class="text-block visible">
+            <div class="sub-title">SKILLS:</div>
+            <div class="list-text" style="text-align: right; font-size: 20px;">
+                HTML5, CSS3,<br>JS, REACT,<br>VUE.JS
+            </div>
+        </div>
+
+        <div id="text-contact" class="text-block visible">
+            <div class="main-title" style="font-size: 20px;">СВЯЗАТЬСЯ<br>СО МНОЙ</div>
+        </div>
     </div>
 
-    <canvas id="gameCanvas"></canvas>
-
-    <svg class="d-pad" viewBox="0 0 100 100">
-        <path d="M40 5 L60 5 L60 40 L95 40 L95 60 L60 60 L60 95 L40 95 L40 60 L5 60 L5 40 L40 40 Z" fill="#ccc" stroke="#000" stroke-width="2"/>
-        <circle cx="50" cy="50" r="10" fill="#999" />
-    </svg>
-
-    <div class="action-btns">
-        <div class="btn-round" style="background: #e03030;" id="btnA">A</div>
-        <div class="btn-round" style="background: #50c050;" id="btnB">B</div>
+    <div id="controls">
+        <div class="dpad" id="dpad">
+            <div class="dpad-cross dpad-v"></div>
+            <div class="dpad-cross dpad-h"></div>
+            <div class="dpad-center"></div>
+            <div class="dpad-arrow arr-u"></div>
+            <div class="dpad-arrow arr-d"></div>
+            <div class="dpad-arrow arr-l"></div>
+            <div class="dpad-arrow arr-r"></div>
+        </div>
+        <div class="action-btns">
+            <div class="btn-ab btn-b" id="btnB">B</div>
+            <div class="btn-ab btn-a" id="btnA">A</div>
+        </div>
     </div>
 </div>
 
 <script>
 /**
- * КОНФИГУРАЦИЯ И ДАННЫЕ
+ * ==========================================
+ * PIXEL ART RENDERING ENGINE (Собственная разработка)
+ * Позволяет рисовать идеальный пиксель-арт без картинок
+ * ==========================================
  */
-const CONFIG = {
-    GRAVITY: 0.6,
-    FRICTION: 0.8,
-    JUMP_FORCE: -14,
-    SPEED: 4,
-    TILE_SIZE: 40
+const PALETTE = {
+    '0': 'transparent', '1': '#000000', '2': '#ffffff', 
+    's': '#f8c8a0', // Кожа
+    'h': '#a06840', // Волосы
+    'j': '#385888', // Джинсы
+    't': '#c0d8f0', // Футболка тень
+    'r': '#f83800', // Красный
+    'y': '#f8b800', // Желтый
+    'g': '#50c848', // Зеленый
+    'b': '#b85800', // Коричневый блок
+    'e': '#e8a868', // Светлый блок
+    'g': '#888888', // Серый
 };
 
-const RESUME_DATA = {
-    exp: { title: "ОПЫТ РАБОТЫ", text: "ФРИЛАНС-РАЗРАБОТЧИК (2 года)\n- Создание игр (HTML/CSS, JS)\n- Разработка интерфейсов" },
-    skills: { title: "SKILLS", text: "HTML5, CSS3, JS, REACT, VUE.JS" },
-    contact: { title: "СВЯЗЬ", text: "TELEGRAM: @disvolo17\nGITHUB: github.com/disvolo17" }
-};
+// Спрайт Аватара (16x16)
+const sprAvatar = [
+    "0000011111100000",
+    "00001hhhhhh10000",
+    "0001hhhhhhhs1000",
+    "001hhshssssss100",
+    "001hhssssssss100",
+    "011hssss1ss1s100",
+    "01ss1ss11s11s100",
+    "01ss1ss1ss1ss100",
+    "001ssssss1sss100",
+    "001sss1111sss100",
+    "0001ssssssss1000",
+    "000011ssss110000",
+    "0001221111221000",
+    "0012t222222t2100",
+    "0122t222222t2210",
+    "0111111111111110"
+];
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-let width, height;
+// Спрайт Персонажа (Mid-Jump) (24x32)
+const sprPlayerJump = [
+    "000000011111100000000000",
+    "0000001hhhhhh10000000000",
+    "000001hhhhhhhs1000001100",
+    "00001hhshssssss10001ss10",
+    "00001hhssssssss1001s1s10",
+    "00011hssss1ss1s101s1s100",
+    "0001ss1ss11s11s101ss1000",
+    "0001ss1ss1ss1ss11ss10000",
+    "00001ssssss1sss1ss100000",
+    "00001sss1111sss111000000",
+    "000001ssssssss1000000000",
+    "00000011ssss110000000000",
+    "000011121111211100000000",
+    "0011ss12222221ss11000000",
+    "01s1s1122112211s1s100000",
+    "01ss101211112101ss100000",
+    "011100122112210011100000",
+    "000000122222210000000000",
+    "000000112222110000000000",
+    "000001j111111j1000000000",
+    "00001jjj1001jjj100000000",
+    "0001jjjj1001jjjj10000000",
+    "0001jjjj1001jjjj10000000",
+    "001jjjj100001jjjj1000000",
+    "001jjj1000001jjjj1000000",
+    "01jjj100000001jjjj100000",
+    "01jj10000000011jjj100000",
+    "0111000000000011jj100000",
+    "111110000000000111000000",
+    "111110000000001111100000",
+    "000000000000001111100000",
+    "000000000000000000000000"
+];
+
+// Спрайт Блока Вопрос (16x16)
+const sprBlockQ = [
+    "1111111111111111",
+    "1yyyyyyyeeyyyyy1",
+    "1yyyyyeeeyyyyyy1",
+    "1yyyyeyyyeyyyyy1",
+    "1yyyey1111eyyyy1",
+    "1yyyey1yy1eyyyy1",
+    "1yyyy1111eeyyyy1",
+    "1yyyyyy1eeyyyyy1",
+    "1yyyyyy1eyyyyyy1",
+    "1yyyyyy1eyyyyyy1",
+    "1yyyyyy111yyyyy1",
+    "1yyyyyy1eyyyyyy1",
+    "1yyyyyy111yyyyy1",
+    "1yyyyyyyyyyyyyy1",
+    "1bbbbbbbbbbbbbb1",
+    "1111111111111111"
+];
+
+// Спрайт Кирпича (16x16)
+const sprBrick = [
+    "1111111111111111",
+    "1eeeeee1eeeeeee1",
+    "1bbbbbb1bbbbbbb1",
+    "1bbbbbb1bbbbbbb1",
+    "1111111111111111",
+    "1eee1eeeeeee1ee1",
+    "1bbb1bbbbbbb1bb1",
+    "1bbb1bbbbbbb1bb1",
+    "1111111111111111",
+    "1eeeeee1eeeeeee1",
+    "1bbbbbb1bbbbbbb1",
+    "1bbbbbb1bbbbbbb1",
+    "1111111111111111",
+    "1eee1eeeeeee1ee1",
+    "1bbb1bbbbbbb1bb1",
+    "1111111111111111"
+];
+
+// Декорации (Звезда, Гриб)
+const sprStar = [
+    "0000000110000000",
+    "0000001yy1000000",
+    "000001yyyy100000",
+    "00001yyyyyy10000",
+    "0111yyyyyyyy1110",
+    "1yyy1y11yy11yy1",
+    "01yy1y11yy11yy10",
+    "001yyyyyyyyyy100",
+    "0001yyyyyyyy1000",
+    "0001yyy11yyy1000",
+    "001yyyy11yyyy100",
+    "01yyyyy11yyyyy10",
+    "01yyyy1001yyyy10",
+    "1yyyy100001yyyy1",
+    "1111100000011111",
+    "0000000000000000"
+];
+
+const sprMushroom = [
+    "0000011111100000",
+    "00011rrrrrr11000",
+    "001r22rrrr22r100",
+    "01rr22rrrr22rr10",
+    "01rrrrrrrrrrrr10",
+    "122rrrr22rrrr221",
+    "122rrrr22rrrr221",
+    "1rrrrrrrrrrrrrr1",
+    "1111111111111111",
+    "001e11eeee11e100",
+    "001ee1eeee1ee100",
+    "001eeeeeeeeee100",
+    "0001eeeeeeee1000",
+    "0000111111110000",
+    "0000000000000000",
+    "0000000000000000"
+];
+
+function drawSprite(ctx, spriteMap, x, y, scale = 1) {
+    for (let row = 0; row < spriteMap.length; row++) {
+        for (let col = 0; col < spriteMap[row].length; col++) {
+            let colorCode = spriteMap[row][col];
+            if (colorCode !== '0') {
+                ctx.fillStyle = PALETTE[colorCode];
+                ctx.fillRect(x + col * scale, y + row * scale, scale, scale);
+            }
+        }
+    }
+}
 
 /**
- * ИГРОВЫЕ ОБЪЕКТЫ
+ * ==========================================
+ * ИГРОВОЙ ДВИЖОК И ФИЗИКА
+ * ==========================================
  */
-const player = {
-    x: 100, y: 0,
-    w: 36, h: 54,
-    vx: 0, vy: 0,
-    isJumping: false,
-    facing: 1, // 1 - вправо, -1 - влево
-    state: 'idle'
-};
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+let cw, ch;
+
+// Данные мира
+const SCALE = 3;
+const TILE_SIZE = 16 * SCALE;
 
 const world = {
-    blocks: [
-        { x: 120, y: 350, type: 'quest', data: RESUME_DATA.exp, hit: false },
-        { x: 280, y: 280, type: 'quest', data: RESUME_DATA.skills, hit: false },
-        { x: 80, y: 220, type: 'brick', hit: false },
-        { x: 350, y: 350, type: 'quest', data: RESUME_DATA.contact, hit: false }
-    ],
-    clouds: [{x: 50, y: 80}, {x: 300, y: 120}],
-    groundY: 0
+    groundY: 0,
+    blocks: [],
+    particles: []
 };
 
-/**
- * ИНИЦИАЛИЗАЦИЯ
- */
-function init() {
-    width = canvas.width = canvas.offsetWidth;
-    height = canvas.height = canvas.offsetHeight;
-    world.groundY = height - 80;
-    player.y = world.groundY - player.h;
+const player = {
+    x: 0, y: 0,
+    w: 24 * SCALE, h: 32 * SCALE,
+    vx: 0, vy: 0,
+    speed: 5, jumpForce: -16, gravity: 0.8,
+    isGrounded: false
+};
+
+// Инициализация размеров и объектов
+function resize() {
+    cw = canvas.width = document.getElementById('device-screen').offsetWidth;
+    ch = canvas.height = document.getElementById('device-screen').offsetHeight;
     
-    // Рисуем аватарку в маленьком окне
-    drawToElement('avatar', 44, 44);
+    world.groundY = ch - 60; // Высота пола
     
-    requestAnimationFrame(gameLoop);
-}
+    // Настраиваем стартовую позицию (как на скрине)
+    player.x = cw / 2 - player.w - 20;
+    player.y = world.groundY - player.h - 100; // Висит в воздухе
 
-/**
- * СИСТЕМА ОТРИСОВКИ ПЕРСОНАЖА (1 в 1 по фото)
- */
-function drawPlayer(context, x, y, w, h) {
-    context.save();
-    context.translate(x + w/2, y + h/2);
-    
-    // Ноги (джинсы)
-    context.fillStyle = '#2b4570';
-    context.fillRect(-12, 10, 10, 15); // Левая
-    context.fillRect(2, 10, 10, 15);  // Правая
-    
-    // Обувь
-    context.fillStyle = '#222';
-    context.fillRect(-13, 23, 11, 4);
-    context.fillRect(2, 23, 11, 4);
-
-    // Тело (белая футболка)
-    context.fillStyle = '#ffffff';
-    context.fillRect(-14, -10, 28, 22);
-    
-    // Принт на футболке (сетка 3x3 как на фото)
-    context.fillStyle = '#000';
-    for(let i=0; i<3; i++) {
-        for(let j=0; j<3; j++) {
-            context.fillRect(-6 + i*5, -6 + j*5, 3, 3);
-        }
-    }
-
-    // Руки с татуировками
-    context.fillStyle = '#f0d0b0';
-    // Правая рука (поднятая при ударе)
-    let armY = player.vy < 0 ? -25 : -5;
-    context.fillRect(14, armY, 8, 18);
-    // Рисуем "тату" мелкими точками
-    context.fillStyle = '#333';
-    context.fillRect(15, armY+5, 3, 2);
-    context.fillRect(17, armY+10, 2, 4);
-
-    // Голова
-    context.fillStyle = '#f0d0b0'; // Кожа
-    context.fillRect(-10, -28, 20, 20);
-    
-    // Прическа (светло-каштановые, как на фото)
-    context.fillStyle = '#a07040';
-    context.fillRect(-11, -30, 22, 10); // Верх
-    context.fillRect(6, -25, 6, 12);   // Бок
-
-    // Лицо
-    context.fillStyle = '#000';
-    context.fillRect(-5, -20, 2, 2); // Глаз
-    context.fillRect(3, -20, 2, 2);  // Глаз
-    
-    context.restore();
-}
-
-/**
- * ВСПОМОГАТЕЛЬНЫЕ ЭЛЕМЕНТЫ (Облака, Блоки, Трубы)
- */
-function drawEnvironment() {
-    // Трава и холмы
-    ctx.fillStyle = '#4aa02c';
-    ctx.beginPath();
-    ctx.arc(100, height-80, 150, Math.PI, 0);
-    ctx.fill();
-
-    // Земля (кирпичная текстура)
-    const patternSize = 20;
-    for(let x=0; x<width; x+=patternSize) {
-        for(let y=world.groundY; y<height; y+=patternSize) {
-            ctx.fillStyle = (Math.floor(x/patternSize) + Math.floor(y/patternSize)) % 2 === 0 ? '#9b4b28' : '#8a4020';
-            ctx.fillRect(x, y, patternSize, patternSize);
-            ctx.strokeStyle = '#5a2010';
-            ctx.strokeRect(x, y, patternSize, patternSize);
-        }
-    }
-
-    // Блоки
-    world.blocks.forEach(b => {
-        ctx.fillStyle = b.hit ? '#888' : '#f09030';
-        ctx.fillRect(b.x, b.y, 40, 40);
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(b.x, b.y, 40, 40);
+    // Генерация блоков
+    world.blocks = [
+        { x: cw/2 - TILE_SIZE*3, y: ch/2 - 20, type: 'brick', hit: false },
+        { x: cw/2 - TILE_SIZE*2, y: ch/2 - 20, type: 'q', hit: false },
         
-        ctx.fillStyle = '#000';
-        ctx.font = '20px Arial';
-        ctx.fillText(b.hit ? '•' : '?', b.x + 12, b.y + 28);
-    });
-
-    // Зеленая труба
-    ctx.fillStyle = '#00a000';
-    ctx.fillRect(20, height-160, 60, 80);
-    ctx.fillRect(10, height-170, 80, 20);
-    ctx.strokeStyle = '#000';
-    ctx.strokeRect(20, height-160, 60, 80);
+        { x: cw/2, y: ch/2 - 50, type: 'q', hit: true, targetText: 'text-exp' }, // Центральный блок (уже ударен)
+        
+        { x: cw/2 + TILE_SIZE*2.5, y: ch/2 + 60, type: 'q', hit: false, targetText: 'text-skills' },
+        
+        { x: cw/2 + 20, y: ch - 180, type: 'brick', hit: false },
+        
+        { x: cw/2 - TILE_SIZE*2, y: ch - 130, type: 'brick', hit: false },
+        { x: cw/2 - TILE_SIZE*1, y: ch - 130, type: 'q', hit: false, targetText: 'text-contact' },
+        { x: cw/2, y: ch - 130, type: 'brick', hit: false },
+        { x: cw/2 + TILE_SIZE*1, y: ch - 130, type: 'brick', hit: false },
+    ];
 }
 
-/**
- * ИГРОВОЙ ЦИКЛ
- */
-function gameLoop() {
-    update();
-    render();
-    requestAnimationFrame(gameLoop);
+// Рендер Аватара (1 раз)
+function renderAvatar() {
+    const actx = document.getElementById('avatar-canvas').getContext('2d');
+    document.getElementById('avatar-canvas').width = 64;
+    document.getElementById('avatar-canvas').height = 64;
+    drawSprite(actx, sprAvatar, 0, 0, 4);
 }
 
+// Система управления
+const keys = {};
+window.addEventListener('keydown', e => keys[e.code] = true);
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+// Джойстик 
+let touchLeft = false, touchRight = false, touchJump = false;
+const dpad = document.getElementById('dpad');
+const btnA = document.getElementById('btnA');
+
+dpad.addEventListener('touchstart', handleDpad);
+dpad.addEventListener('touchmove', handleDpad);
+dpad.addEventListener('touchend', () => { touchLeft = false; touchRight = false; });
+
+function handleDpad(e) {
+    e.preventDefault();
+    const rect = dpad.getBoundingClientRect();
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
+    touchLeft = x < rect.width / 2;
+    touchRight = x >= rect.width / 2;
+}
+
+btnA.addEventListener('touchstart', e => { e.preventDefault(); touchJump = true; });
+btnA.addEventListener('touchend', e => { e.preventDefault(); touchJump = false; });
+
+// Создание эффекта разбивания (частицы)
+function spawnParticles(x, y) {
+    for(let i=0; i<8; i++) {
+        world.particles.push({
+            x: x + TILE_SIZE/2, y: y + TILE_SIZE/2,
+            vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 1) * 10,
+            size: Math.random() * 6 + 4,
+            life: 1.0
+        });
+    }
+}
+
+// Игровой цикл (Логика)
 function update() {
-    // Гравитация
-    player.vy += CONFIG.GRAVITY;
-    player.y += player.vy;
+    // Движение
+    if (keys['ArrowLeft'] || touchLeft) player.vx = -player.speed;
+    else if (keys['ArrowRight'] || touchRight) player.vx = player.speed;
+    else player.vx = 0;
+
+    // Прыжок
+    if ((keys['Space'] || touchJump) && player.isGrounded) {
+        player.vy = player.jumpForce;
+        player.isGrounded = false;
+    }
+
+    player.vy += player.gravity;
     player.x += player.vx;
+    player.y += player.vy;
 
-    // Трение
-    player.vx *= CONFIG.FRICTION;
+    // Ограничение экрана
+    if (player.x < 0) player.x = 0;
+    if (player.x + player.w > cw) player.x = cw - player.w;
 
-    // Столкновение с полом
-    if (player.y + player.h > world.groundY) {
+    // Пол
+    if (player.y + player.h >= world.groundY) {
         player.y = world.groundY - player.h;
         player.vy = 0;
-        player.isJumping = false;
+        player.isGrounded = true;
     }
 
-    // Проверка удара головой о блоки
+    // Коллизии с блоками (удар снизу)
     world.blocks.forEach(b => {
         if (player.vy < 0 && 
-            player.x + player.w > b.x && player.x < b.x + 40 &&
-            player.y < b.y + 40 && player.y > b.y) {
-                player.vy = 2;
-                if(!b.hit && b.data) {
-                    showDialog(b.data);
-                    b.hit = true;
+            player.x + player.w > b.x && player.x < b.x + TILE_SIZE &&
+            player.y < b.y + TILE_SIZE && player.y + player.h > b.y) {
+            
+            player.y = b.y + TILE_SIZE;
+            player.vy = 2; // Отскок вниз
+            
+            if (!b.hit) {
+                b.hit = true;
+                spawnParticles(b.x, b.y);
+                // Показ текста
+                if(b.targetText) {
+                    document.querySelectorAll('.text-block').forEach(el => el.classList.remove('visible'));
+                    document.getElementById(b.targetText).classList.add('visible');
                 }
+            }
         }
     });
 
-    // Управление
-    if (keys['ArrowLeft']) player.vx = -CONFIG.SPEED;
-    if (keys['ArrowRight']) player.vx = CONFIG.SPEED;
-    if (keys['ArrowUp'] && !player.isJumping) {
-        player.vy = CONFIG.JUMP_FORCE;
-        player.isJumping = true;
+    // Обновление частиц
+    world.particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.life -= 0.02;
+    });
+    world.particles = world.particles.filter(p => p.life > 0);
+}
+
+// Игровой цикл (Рендер)
+function draw() {
+    ctx.clearRect(0, 0, cw, ch);
+
+    // Рисуем землю (паттерн кирпичей)
+    ctx.fillStyle = '#c84c0c';
+    ctx.fillRect(0, world.groundY, cw, ch - world.groundY);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(0, world.groundY); ctx.lineTo(cw, world.groundY); ctx.stroke();
+    
+    // Сетка кирпичей на полу
+    ctx.lineWidth = 2;
+    for(let y = world.groundY; y < ch; y += 20) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke();
+        let offsetX = (y % 40 === 0) ? 0 : 20;
+        for(let x = offsetX; x < cw; x += 40) {
+            ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y+20); ctx.stroke();
+        }
     }
+
+    // Рисуем декорации
+    drawSprite(ctx, sprStar, cw - 100, ch/2 - 40, SCALE);
+    drawSprite(ctx, sprMushroom, cw - 60, ch/2 - 40, SCALE);
+
+    // Рисуем блоки
+    world.blocks.forEach(b => {
+        if (b.type === 'q') {
+            if(b.hit) {
+                // Пустой ударенный блок
+                ctx.fillStyle = '#b85800'; ctx.fillRect(b.x, b.y, TILE_SIZE, TILE_SIZE);
+                ctx.strokeStyle = '#000'; ctx.lineWidth = 4; ctx.strokeRect(b.x, b.y, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = '#000'; ctx.fillRect(b.x + 8, b.y + 8, 8, 8);
+                ctx.fillRect(b.x + TILE_SIZE - 16, b.y + 8, 8, 8);
+                ctx.fillRect(b.x + 8, b.y + TILE_SIZE - 16, 8, 8);
+                ctx.fillRect(b.x + TILE_SIZE - 16, b.y + TILE_SIZE - 16, 8, 8);
+            } else {
+                drawSprite(ctx, sprBlockQ, b.x, b.y, SCALE);
+            }
+        } else {
+            drawSprite(ctx, sprBrick, b.x, b.y, SCALE);
+        }
+    });
+
+    // Рисуем частицы (черные и белые квадраты для эффекта разбивания)
+    world.particles.forEach(p => {
+        ctx.fillStyle = Math.random() > 0.5 ? '#000' : '#fff';
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+    });
+
+    // Рисуем персонажа (Используем спрайт в прыжке)
+    drawSprite(ctx, sprPlayerJump, player.x, player.y, SCALE);
 }
 
-function render() {
-    ctx.clearRect(0, 0, width, height);
-    drawEnvironment();
-    drawPlayer(ctx, player.x, player.y, player.w, player.h);
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
 }
 
-/**
- * ИНТЕРФЕЙС
- */
-const keys = {};
-window.onkeydown = (e) => {
-    keys[e.code] = true;
-    if(e.code === 'Space') closeDialog();
+// Запуск
+window.onload = () => {
+    resize();
+    renderAvatar();
+    window.addEventListener('resize', resize);
+    
+    // Инициализация частиц для центрального блока (чтобы выглядело как на скрине)
+    spawnParticles(cw/2, ch/2 - 50);
+    
+    loop();
 };
-window.onkeyup = (e) => keys[e.code] = false;
 
-// Поддержка кнопок на экране
-document.getElementById('btnA').ontouchstart = () => keys['ArrowUp'] = true;
-document.getElementById('btnA').ontouchend = () => keys['ArrowUp'] = false;
-
-function showDialog(data) {
-    const d = document.getElementById('dialog');
-    document.getElementById('d-title').innerText = data.title;
-    document.getElementById('d-text').innerText = data.text;
-    d.style.display = 'block';
-}
-
-function closeDialog() {
-    document.getElementById('dialog').style.display = 'none';
-}
-
-function drawToElement(id, w, h) {
-    const el = document.getElementById(id);
-    const tmpCanvas = document.createElement('canvas');
-    tmpCanvas.width = w; tmpCanvas.height = h;
-    const tCtx = tmpCanvas.getContext('2d');
-    drawPlayer(tCtx, 4, 10, 36, 54);
-    el.style.backgroundImage = `url(${tmpCanvas.toDataURL()})`;
-    el.style.backgroundSize = 'contain';
-}
-
-window.onload = init;
+// Закрытие текста по пробелу
+window.addEventListener('keydown', e => {
+    if(e.code === 'Space') {
+        document.querySelectorAll('.text-block').forEach(el => el.classList.remove('visible'));
+    }
+});
 </script>
 </body>
 </html>
