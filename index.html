@@ -1,39 +1,19 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<title>Cyberpunk Mario</title>
-<style>
-body { margin:0; overflow:hidden; background:#000; }
-canvas { display:block; }
-</style>
-</head>
-<body>
-
-<canvas id="game"></canvas>
-
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
-canvas.width = innerWidth;
-canvas.height = innerHeight;
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-// ===== LOAD =====
 function load(src){
   return new Promise((resolve)=>{
     const img = new Image();
-    img.src = "./" + src;
+    img.src = src;
     img.onload = ()=>resolve(img);
-    img.onerror = ()=>{
-      console.warn("Не загрузилось:", src);
-      resolve(img); // не ломаем игру
-    }
   });
 }
 
-(async () => {
+(async function(){
 
-// ===== ASSETS =====
 const sprites = {
   idle: await load("idle.png"),
   jump: await load("jump.png"),
@@ -56,14 +36,15 @@ const platformImg = await load("platform.png");
 const coinImg = await load("coin.png");
 const enemyImg = await load("enemy.png");
 
-// ===== STATE =====
-let state = "start"; // start | game | gameover
+let state = "start";
 
-// ===== PLAYER =====
 let player = {
-  x:100, y:100,
-  w:64, h:64,
-  vx:0, vy:0,
+  x:100,
+  y:100,
+  w:64,
+  h:64,
+  vx:0,
+  vy:0,
   jump:-14,
   gravity:0.6,
   grounded:false,
@@ -74,14 +55,13 @@ let player = {
   maxJumps:2
 };
 
-// ===== WORLD =====
 let cameraX = 0;
 
 let platforms = [];
 for(let i=0;i<50;i++){
   platforms.push({
-    x:i220,
-    y:400 + Math.sin(i)120,
+    x:i*220,
+    y:400 + Math.sin(i)*120,
     w:200,
     h:40
   });
@@ -90,8 +70,8 @@ for(let i=0;i<50;i++){
 let coins = [];
 for(let i=0;i<30;i++){
   coins.push({
-    x:i300 + 150,
-    y:250 + Math.sin(i)50,
+    x:i*300 + 150,
+    y:250,
     size:32,
     taken:false
   });
@@ -100,44 +80,50 @@ for(let i=0;i<30;i++){
 let enemies = [];
 for(let i=0;i<20;i++){
   enemies.push({
-    x:i400 + 200,
+    x:i*400 + 200,
     y:350,
-    w:50, h:50,
-    vx:1 + Math.random(),
+    w:50,
+    h:50,
+    vx:1,
     alive:true
   });
 }
 
-// ===== INPUT =====
 let keys = {};
-addEventListener("keydown", e=>{
-  keys[e.code]=true;
 
-  if(state==="start" && e.code==="Enter"){
-    state="game";
+window.addEventListener("keydown", function(e){
+  keys[e.code] = true;
+
+  if(state === "start" && e.code === "Enter"){
+    state = "game";
   }
 
-  if(state==="gameover" && e.code==="Enter"){
+  if(state === "gameover" && e.code === "Enter"){
     location.reload();
   }
 });
 
-addEventListener("keyup", e=>{
-  keys[e.code]=false;
+window.addEventListener("keyup", function(e){
+  keys[e.code] = false;
 });
 
-// ===== UPDATE =====
 function update(){
 
-if(state!=="game") return;
+if(state !== "game") return;
 
-// движение
 player.vx = 0;
-if(keys["ArrowRight"]){ player.vx = 6; player.dir=1; }
-if(keys["ArrowLeft"]){ player.vx = -6; player.dir=-1; }
 
-// двойной прыжок
-if(keys["Space"]){
+if(keys["ArrowRight"]) {
+  player.vx = 6;
+  player.dir = 1;
+}
+
+if(keys["ArrowLeft"]) {
+  player.vx = -6;
+  player.dir = -1;
+}
+
+if(keys["Space"]) {
   if(player.jumps < player.maxJumps){
     player.vy = player.jump;
     player.jumps++;
@@ -145,15 +131,14 @@ if(keys["Space"]){
   }
 }
 
-// гравитация
 player.vy += player.gravity;
 
 player.x += player.vx;
 player.y += player.vy;
 
-// коллизии платформ
 player.grounded = false;
-platforms.forEach(p=>{
+
+platforms.forEach(function(p){
   if(
     player.x < p.x + p.w &&
     player.x + player.w > p.x &&
@@ -169,8 +154,7 @@ platforms.forEach(p=>{
   }
 });
 
-// монеты
-coins.forEach(c=>{
+coins.forEach(function(c){
   if(!c.taken &&
     player.x < c.x + c.size &&
     player.x + player.w > c.x &&
@@ -182,12 +166,10 @@ coins.forEach(c=>{
   }
 });
 
-// враги
-enemies.forEach(e=>{
+enemies.forEach(function(e){
   if(!e.alive) return;
 
   e.x += e.vx;
-  if(Math.random()<0.01) e.vx = -1;
 
   if(
     player.x < e.x + e.w &&
@@ -204,59 +186,51 @@ enemies.forEach(e=>{
   }
 });
 
-// падение
 if(player.y > canvas.height){
   state = "gameover";
 }
 
-// камера
 cameraX = player.x - canvas.width/2;
+
 }
 
-// ===== DRAW =====
 function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height);
 
-// старт экран
-if(state==="start"){
-  ctx.fillStyle="black";
+if(state === "start"){
+  ctx.fillStyle = "black";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  ctx.fillStyle="white";
-  ctx.font="50px Arial";
-  ctx.fillText("CYBER MARIO", canvas.width/2-180, canvas.height/2-50);
+  ctx.fillStyle = "white";
+  ctx.font = "50px Arial";
+  ctx.fillText("CYBER MARIO", canvas.width/2 - 180, canvas.height/2 - 50);
 
-  ctx.font="25px Arial";
-  ctx.fillText("Press ENTER to start", canvas.width/2-140, canvas.height/2+20);
+  ctx.font = "25px Arial";
+  ctx.fillText("Press ENTER to start", canvas.width/2 - 140, canvas.height/2 + 20);
   return;
 }
 
-// фон (параллакс)
-bg.forEach((b,i)=>{
-  ctx.drawImage(b, -cameraX(0.2+i0.3), 0, canvas.width*2, canvas.height);
+bg.forEach(function(b,i){
+  ctx.drawImage(b, -cameraX*(0.2+i*0.3), 0, canvas.width*2, canvas.height);
 });
 
-// платформы
-platforms.forEach(p=>{
+platforms.forEach(function(p){
   ctx.drawImage(platformImg, p.x-cameraX, p.y, p.w, p.h);
 });
 
-// монеты
-coins.forEach(c=>{
+coins.forEach(function(c){
   if(!c.taken){
     ctx.drawImage(coinImg, c.x-cameraX, c.y, c.size, c.size);
   }
 });
 
-// враги
-enemies.forEach(e=>{
+enemies.forEach(function(e){
   if(e.alive){
     ctx.drawImage(enemyImg, e.x-cameraX, e.y, e.w, e.h);
   }
 });
 
-// игрок
 let img = sprites.idle;
 
 if(!player.grounded){
@@ -268,31 +242,31 @@ else if(player.vx !== 0){
 }
 
 ctx.save();
-if(player.dir===-1){
+
+if(player.dir === -1){
   ctx.scale(-1,1);
   ctx.drawImage(img, -(player.x-cameraX)-player.w, player.y, player.w, player.h);
-}else{
+} else {
   ctx.drawImage(img, player.x-cameraX, player.y, player.w, player.h);
 }
+
 ctx.restore();
 
-// UI
-ctx.fillStyle="white";
-ctx.font="20px Arial";
-ctx.fillText("Coins: " + player.coins, 20,30);
+ctx.fillStyle = "white";
+ctx.font = "20px Arial";
+ctx.fillText("Coins: " + player.coins, 20, 30);
 
-// game over
-if(state==="gameover"){
-  ctx.fillStyle="red";
-  ctx.font="50px Arial";
-  ctx.fillText("GAME OVER", canvas.width/2-150, canvas.height/2);
+if(state === "gameover"){
+  ctx.fillStyle = "red";
+  ctx.font = "50px Arial";
+  ctx.fillText("GAME OVER", canvas.width/2 - 150, canvas.height/2);
 
-  ctx.font="20px Arial";
-  ctx.fillText("Press ENTER to restart", canvas.width/2-110, canvas.height/2+40);
-}
+  ctx.font = "20px Arial";
+  ctx.fillText("Press ENTER to restart", canvas.width/2 - 110, canvas.height/2 + 40);
 }
 
-// ===== LOOP =====
+}
+
 function loop(){
   update();
   draw();
@@ -303,6 +277,3 @@ loop();
 
 })();
 </script>
-
-</body>
-</html>
