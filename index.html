@@ -2,26 +2,44 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Cyber Mario - Parallax Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Denis - PM & Creative CV</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; touch-action: manipulation; }
         canvas { display: block; }
         #ui {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #00ff00;
-            font-size: 24px;
-            text-shadow: 2px 2px #000;
-            pointer-events: none;
-            z-index: 10;
+            position: absolute; top: 10px; left: 10px; right: 10px;
+            color: #fff; font-size: 14px; text-shadow: 2px 2px #000;
+            pointer-events: none; z-index: 10; text-align: center;
         }
+        /* Стили для мобильных кнопок */
+        .controls {
+            position: absolute; bottom: 20px; width: 100%;
+            display: none; justify-content: space-between; padding: 0 30px; box-sizing: border-box;
+            user-select: none; z-index: 20;
+        }
+        .btn {
+            width: 70px; height: 70px; background: rgba(255,255,255,0.2);
+            border: 2px solid #fff; border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: bold; font-size: 24px;
+        }
+        .btn:active { background: rgba(255,255,255,0.5); }
+        @media (pointer: coarse) { .controls { display: flex; } }
     </style>
 </head>
 <body>
 
+<div id="ui">РАЗБИВАЙ ЖЕЛТЫЕ БЛОКИ ГОЛОВОЙ</div>
 <canvas id="game"></canvas>
-<div id="ui">COINS: 0</div>
+
+<div class="controls">
+    <div style="display: flex; gap: 15px;">
+        <div class="btn" id="btnLeft">←</div>
+        <div class="btn" id="btnRight">→</div>
+    </div>
+    <div class="btn" id="btnJump">UP</div>
+</div>
 
 <script>
 window.addEventListener("load", () => {
@@ -45,76 +63,75 @@ window.addEventListener("load", () => {
     }
 
     (async function() {
-        // ===== ЗАГРУЗКА СПРАЙТОВ И ФОНОВ =====
         const sprites = {
             idle: await load("idle.png"),
             jump: await load("jump.png"),
             fall: await load("fall.png"),
-            run: [
-                await load("run.png"), await load("run1.png"), 
-                await load("run2.png"), await load("run3.png")
-            ]
+            run: [await load("run.png"), await load("run1.png"), await load("run2.png"), await load("run3.png")]
         };
-
-        const backgrounds = {
-            bg1: await load("bg1.png"), // Дальний слой (медленный)
-            bg2: await load("bg2.png"), // Средний слой
-            bg3: await load("bg3.png")  // Ближний слой (быстрый)
-        };
-
+        const bgs = [await load("bg1.png"), await load("bg2.png"), await load("bg3.png")];
         const platformImg = await load("platform.png");
-        const coinImg = await load("coin.png");
-        const enemyImg = await load("enemy.png");
 
         let player = {
-            x: 100, y: 100, w: 70, h: 70,
-            vx: 0, vy: 0,
-            gravity: 0.8,
-            jumpPower: -16,
-            grounded: false,
-            jumps: 0,
-            maxJumps: 2,
-            frame: 0,
-            dir: 1,
-            coins: 0
+            x: 100, y: 100, w: 60, h: 60,
+            vx: 0, vy: 0, gravity: 0.6, jumpPower: -15,
+            grounded: false, jumps: 0, maxJumps: 2, frame: 0, dir: 1
         };
 
-        let keys = {};
         let cameraX = 0;
-        let state = "start";
+        let keys = { left: false, right: false };
+        let activeMessage = "ДЕНИС: PROJECT MANAGER (START)";
+
+        let resumeBlocks = [
+            { x: 600, y: 300, text: "ДЕНИС — PROJECT MANAGER & CREATIVE PRODUCER", hit: false },
+            { x: 1200, y: 250, text: "ЭКСПЕРТИЗА: РАБОТА С ТОПОВЫМИ АРТИСТАМИ", hit: false },
+            { x: 1800, y: 300, text: "ТУРЫ: ОРГАНИЗАЦИЯ КОНЦЕРТОВ И ЛОГИСТИКА", hit: false },
+            { x: 2400, y: 250, text: "MANAGEMENT: ВЕДЕНИЕ КРЕАТИВНЫХ ПРОЕКТОВ", hit: false },
+            { x: 3000, y: 300, text: "SKILLS: БЮДЖЕТЫ, КОМАНДА, ДЕДЛАЙНЫ", hit: false },
+            { x: 3600, y: 250, text: "ШОУ: СОЗДАНИЕ МАСШТАБНОГО КОНТЕНТА", hit: false },
+            { x: 4200, y: 300, text: "TG: @disvolo | DISVOLO17.GITHUB.IO", hit: false }
+        ];
+
+        // Финальная точка (Сцена)
+        const finishLine = 4800;
 
         let platforms = [];
-        for (let i = 0; i < 100; i++) {
-            platforms.push({ x: i * 320, y: 550 + Math.sin(i * 0.5) * 120, w: 220, h: 40 });
+        for (let i = 0; i < 80; i++) {
+            platforms.push({ x: i * 300, y: canvas.height - 150 + Math.sin(i) * 50, w: 200, h: 30 });
         }
 
-        let coins = [];
-        for (let i = 0; i < 50; i++) {
-            coins.push({ x: i * 400 + 200, y: 350, size: 32, taken: false });
-        }
-
-        let enemies = [];
-        for (let i = 0; i < 30; i++) {
-            enemies.push({ x: i * 650 + 500, y: 450, w: 50, h: 50, vx: 2, range: 150, startX: i * 650 + 500, alive: true });
-        }
-
+        // Управление (Клавиатура + Тач)
         window.addEventListener("keydown", e => {
-            if (e.code === "Space" && state === "game" && player.jumps < player.maxJumps) {
+            if (e.code === "ArrowLeft") keys.left = true;
+            if (e.code === "ArrowRight") keys.right = true;
+            if (e.code === "Space") doJump();
+        });
+        window.addEventListener("keyup", e => {
+            if (e.code === "ArrowLeft") keys.left = false;
+            if (e.code === "ArrowRight") keys.right = false;
+        });
+
+        function doJump() {
+            if (player.jumps < player.maxJumps) {
                 player.vy = player.jumpPower;
                 player.jumps++;
             }
-            keys[e.code] = true;
-            if (state === "start" && e.code === "Enter") state = "game";
-            if (state === "gameover" && e.code === "Enter") location.reload();
-        });
-        window.addEventListener("keyup", e => { keys[e.code] = false; });
+        }
+
+        // Кнопки для мобилок
+        const bindBtn = (id, key) => {
+            const el = document.getElementById(id);
+            el.addEventListener("touchstart", (e) => { e.preventDefault(); if(key==='jump') doJump(); else keys[key] = true; });
+            el.addEventListener("touchend", (e) => { e.preventDefault(); if(key!=='jump') keys[key] = false; });
+        };
+        bindBtn("btnLeft", "left");
+        bindBtn("btnRight", "right");
+        bindBtn("btnJump", "jump");
 
         function update() {
-            if (state !== "game") return;
-
             player.vx = 0;
-            if (keys["ArrowRight"]) { player.vx = 7; player.dir = 1; }
-            if (keys["ArrowLeft"]) { player.vx = -7; player.dir = -1; }
+            if (keys.left) { player.vx = -6; player.dir = -1; }
+            if (keys.right) { player.vx = 6; player.dir = 1; }
 
             player.vy += player.gravity;
             player.x += player.vx;
@@ -122,7 +139,7 @@ window.addEventListener("load", () => {
 
             player.grounded = false;
             platforms.forEach(p => {
-                if (player.x + 15 < p.x + p.w && player.x + player.w - 15 > p.x &&
+                if (player.x + 10 < p.x + p.w && player.x + player.w - 10 > p.x &&
                     player.y + player.h > p.y && player.y + player.h < p.y + p.h + 20) {
                     if (player.vy > 0) {
                         player.y = p.y - player.h;
@@ -133,80 +150,73 @@ window.addEventListener("load", () => {
                 }
             });
 
-            coins.forEach(c => {
-                if (!c.taken && player.x < c.x + c.size && player.x + player.w > c.x &&
-                    player.y < c.y + c.size && player.y + player.h > c.y) {
-                    c.taken = true;
-                    player.coins++;
-                    document.getElementById("ui").innerText = "COINS: " + player.coins;
+            resumeBlocks.forEach(b => {
+                if (player.x + player.w > b.x && player.x < b.x + 50 &&
+                    player.y < b.y + 50 && player.y + player.h > b.y) {
+                    if (player.vy < 0 && player.y > b.y + 10) {
+                        b.hit = true; player.vy = 3; activeMessage = b.text;
+                    }
                 }
             });
 
-            enemies.forEach(e => {
-                if (!e.alive) return;
-                e.x += e.vx;
-                if (Math.abs(e.x - e.startX) > e.range) e.vx *= -1;
-                if (player.x < e.x + e.w && player.x + player.w > e.x &&
-                    player.y < e.y + e.h && player.y + player.h > e.y) {
-                    if (player.vy > 5) { e.alive = false; player.vy = -12; }
-                    else { state = "gameover"; }
-                }
-            });
+            // Проверка финиша
+            if (player.x > finishLine) {
+                activeMessage = "ПЕРЕХОДИМ К РЕЗЮМЕ...";
+                setTimeout(() => { window.location.href = "https://disvolo17.github.io/work/"; }, 1000);
+            }
 
-            if (player.y > canvas.height + 600) state = "gameover";
+            if (player.y > canvas.height + 100) { player.x = 100; player.y = 100; player.vy = 0; }
             cameraX = player.x - canvas.width / 2;
-        }
-
-        function drawBackgroundLayer(img, speed) {
-            if (!img) return;
-            // Рассчитываем смещение так, чтобы фон "зацикливался"
-            let x = -(cameraX * speed) % canvas.width;
-            ctx.drawImage(img, x, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, x + canvas.width, 0, canvas.width, canvas.height);
-            if (x > 0) ctx.drawImage(img, x - canvas.width, 0, canvas.width, canvas.height);
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            if (state === "start") {
-                ctx.fillStyle = "white";
-                ctx.font = "40px 'Courier New'";
-                ctx.fillText("CYBER MARIO", canvas.width / 2 - 130, canvas.height / 2);
-                ctx.font = "20px 'Courier New'";
-                ctx.fillText("PRESS ENTER TO START", canvas.width / 2 - 120, canvas.height / 2 + 50);
-                return;
-            }
+            bgs.forEach((bg, i) => {
+                if (!bg) return;
+                let speed = [0.1, 0.3, 0.6][i];
+                let x = -(cameraX * speed) % canvas.width;
+                ctx.drawImage(bg, x, 0, canvas.width, canvas.height);
+                ctx.drawImage(bg, x + canvas.width, 0, canvas.width, canvas.height);
+            });
 
-            // РИСУЕМ ФОНЫ (Параллакс)
-            drawBackgroundLayer(backgrounds.bg1, 0.2); // Самый медленный
-            drawBackgroundLayer(backgrounds.bg2, 0.5); 
-            drawBackgroundLayer(backgrounds.bg3, 0.8); // Самый быстрый
+            ctx.fillStyle = "#0f0";
+            ctx.font = "bold 16px 'Courier New'";
+            ctx.textAlign = "center";
+            // Оборачивание текста для мобилок
+            let words = activeMessage.split(' ');
+            if (words.length > 5) {
+                ctx.fillText(words.slice(0, 5).join(' '), canvas.width/2, 50);
+                ctx.fillText(words.slice(5).join(' '), canvas.width/2, 75);
+            } else {
+                ctx.fillText(activeMessage, canvas.width/2, 60);
+            }
+            ctx.textAlign = "left";
 
             platforms.forEach(p => {
                 if (platformImg) ctx.drawImage(platformImg, p.x - cameraX, p.y, p.w, p.h);
-                else { ctx.fillStyle = "#333"; ctx.fillRect(p.x - cameraX, p.y, p.w, p.h); }
+                else { ctx.fillStyle = "#444"; ctx.fillRect(p.x - cameraX, p.y, p.w, p.h); }
             });
 
-            coins.forEach(c => {
-                if (!c.taken) {
-                    if (coinImg) ctx.drawImage(coinImg, c.x - cameraX, c.y, c.size, c.size);
-                    else { ctx.fillStyle = "yellow"; ctx.fillRect(c.x - cameraX, c.y, c.size, c.size); }
+            resumeBlocks.forEach(b => {
+                ctx.fillStyle = b.hit ? "#333" : "#FFD700";
+                ctx.fillRect(b.x - cameraX, b.y, 50, 50);
+                if (!b.hit) {
+                    ctx.fillStyle = "#000"; ctx.font = "bold 30px Arial";
+                    ctx.fillText("?", b.x - cameraX + 15, b.y + 38);
                 }
             });
 
-            enemies.forEach(e => {
-                if (e.alive) {
-                    if (enemyImg) ctx.drawImage(enemyImg, e.x - cameraX, e.y, e.w, e.h);
-                    else { ctx.fillStyle = "red"; ctx.fillRect(e.x - cameraX, e.y, e.w, e.h); }
-                }
-            });
+            // Финишная черта
+            ctx.fillStyle = "#f0f";
+            ctx.fillRect(finishLine - cameraX, canvas.height - 300, 10, 200);
+            ctx.fillText("FINISH (GO TO SITE)", finishLine - cameraX - 50, canvas.height - 320);
 
             let img = sprites.idle;
-            if (!player.grounded) img = player.vy < 0 ? sprites.jump : sprites.fall;
+            if (!player.grounded) img = (player.vy < 0) ? sprites.jump : sprites.fall;
             else if (player.vx !== 0) {
                 player.frame += 0.2;
-                img = sprites.run[Math.floor(player.frame) % sprites.run.length];
+                img = sprites.run[Math.floor(player.frame) % 4];
             }
 
             ctx.save();
@@ -219,20 +229,11 @@ window.addEventListener("load", () => {
             }
             ctx.restore();
 
-            if (state === "gameover") {
-                ctx.fillStyle = "rgba(0,0,0,0.7)";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = "red";
-                ctx.font = "50px 'Courier New'";
-                ctx.fillText("GAME OVER", canvas.width / 2 - 130, canvas.height / 2);
-                ctx.fillStyle = "white";
-                ctx.font = "20px 'Courier New'";
-                ctx.fillText("PRESS ENTER TO RESTART", canvas.width / 2 - 140, canvas.height / 2 + 60);
-            }
+            requestAnimationFrame(draw);
         }
 
-        function loop() { update(); draw(); requestAnimationFrame(loop); }
-        loop();
+        setInterval(update, 1000/60);
+        draw();
     })();
 });
 </script>
