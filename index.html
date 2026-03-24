@@ -1,220 +1,225 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Disvolo17 - Cyberpunk Platformer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --neon-pink: #ff00ff;
-            --neon-blue: #00f2ff;
-            --bg-dark: #050510;
-        }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg-dark); overflow: hidden; font-family: 'Orbitron', sans-serif; }
-        #game-container { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-        canvas { display: block; image-rendering: pixelated; }
-
-        /* HUD */
-        .ui { position: absolute; top: 20px; left: 20px; color: var(--neon-blue); pointer-events: none; z-index: 10; text-shadow: 0 0 10px var(--neon-blue); }
-        .score { font-size: 24px; font-weight: bold; }
-
-        /* Модальное окно в стиле "High-Tech" */
-        .modal {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(5, 5, 20, 0.9); border: 2px solid var(--neon-pink);
-            padding: 30px; color: white; display: none; z-index: 100;
-            width: 320px; text-align: center; border-radius: 5px;
-            box-shadow: 0 0 30px var(--neon-pink); backdrop-filter: blur(10px);
-        }
-        .modal h2 { color: var(--neon-pink); margin-bottom: 15px; }
-        
-        /* Кнопки управления */
-        .controls { position: absolute; bottom: 30px; left: 0; width: 100%; display: flex; justify-content: space-around; z-index: 20; }
-        .btn { width: 70px; height: 70px; background: rgba(0, 242, 255, 0.1); border: 2px solid var(--neon-blue); border-radius: 50%; color: var(--neon-blue); display: flex; align-items: center; justify-content: center; font-size: 24px; }
-    </style>
+<meta charset="UTF-8">
+<title>Cyber Mario</title>
+<style>
+body { margin:0; overflow:hidden; background:#000; }
+canvas { display:block; }
+</style>
 </head>
 <body>
 
-<div id="game-container">
-    <div class="ui">
-        <div class="score">XP: 2500</div>
-        <div style="font-size: 12px; opacity: 0.7;">LEVEL: NEON DUBAI</div>
-    </div>
-
-    <div id="modal" class="modal">
-        <h2 id="m-title">DATA LINK</h2>
-        <p id="m-body"></p>
-        <button onclick="closeModal()" style="background: var(--neon-pink); border: none; padding: 10px 20px; color: white; cursor: pointer;">CLOSE</button>
-    </div>
-
-    <canvas id="canvas"></canvas>
-
-    <div class="controls">
-        <div style="display:flex; gap:20px;">
-            <div class="btn" id="l-btn">←</div>
-            <div class="btn" id="r-btn">→</div>
-        </div>
-        <div class="btn" id="j-btn">UP</div>
-    </div>
-</div>
+<canvas id="game"></canvas>
 
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-let cw, ch;
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
-// Данные из твоего резюме
-const DATA = {
-    exp: { t: "ОПЫТ РАБОТЫ", b: "Фриланс-разработчик (2 года). Создание игр и интерфейсов на JS/React." },
-    skills: { t: "SKILLS", b: "HTML5, CSS3, JS, React, Vue.js, Prompt Engineering." },
-    contact: { t: "СВЯЗАТЬСЯ", b: "GitHub: disvolo17. Создаю интерактивные цифровые миры." }
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// ===== ЗАГРУЗКА =====
+const img = src => { let i=new Image(); i.src=src; return i; }
+
+const sprites = {
+  idle: img("idle.png"),
+  run: [img("run1.png"), img("run2.png"), img("run3.png"), img("run.png")],
+  jump: img("jump.png"),
+  fall: img("fall.png")
 };
 
-const state = {
-    camX: 0,
-    modalOpen: false,
-    keys: { l: false, r: false, j: false }
-};
+const bg = [img("bg1.png"), img("bg2.png"), img("bg3.png")];
+const coinImg = img("coin.png");
+const enemyImg = img("enemy.png");
+const platformImg = img("platform.png");
 
+// ===== ИГРОК =====
 const player = {
-    x: 100, y: 0, w: 32, h: 48, vx: 0, vy: 0, 
-    speed: 6, jump: -15, grounded: false
+  x:100,
+  y:300,
+  w:64,
+  h:64,
+  vx:0,
+  vy:0,
+  speed:5,
+  jump:15,
+  grounded:false,
+  frame:0,
+  tick:0,
+  hp:3
 };
 
-const objects = {
-    platforms: [],
-    bgElements: [] // Для параллакса
-};
+let keys = {};
 
-function init() {
-    cw = canvas.width = window.innerWidth;
-    ch = canvas.height = window.innerHeight;
-    player.y = ch - 200;
+// ===== МИР =====
+let gravity = 0.8;
+let cameraX = 0;
+let score = 0;
 
-    // Создаем параллакс фон (башни)
-    for(let i=0; i<20; i++) {
-        objects.bgElements.push({
-            x: i * 300, y: ch - 500, w: 150, h: 500, 
-            layer: Math.random() * 0.5, // Скорость движения
-            color: `rgba(20, 20, 60, ${Math.random() * 0.5})`
-        });
-    }
+// платформы
+const platforms = [
+  {x:0,y:500,w:2000,h:50},
+  {x:300,y:400,w:200,h:20},
+  {x:700,y:350,w:200,h:20},
+  {x:1100,y:300,w:200,h:20},
+];
 
-    // Уровень
-    objects.platforms.push({x: 0, y: ch - 60, w: 5000, h: 60, type: 'floor'}); // Пол
-    objects.platforms.push({x: 400, y: ch - 200, w: 150, h: 20, data: DATA.exp});
-    objects.platforms.push({x: 750, y: ch - 350, w: 150, h: 20, data: DATA.skills});
-    objects.platforms.push({x: 1200, y: ch - 250, w: 200, h: 20, data: DATA.contact});
+// монеты
+let coins = [
+  {x:350,y:350},
+  {x:750,y:300},
+  {x:1150,y:250}
+];
 
-    loop();
-}
+// враги
+let enemies = [
+  {x:600,y:460,w:50,h:50,vx:2,alive:true},
+  {x:1000,y:460,w:50,h:50,vx:-2,alive:true}
+];
 
-function update() {
-    if(state.modalOpen) return;
+// ===== УПРАВЛЕНИЕ =====
+onkeydown = e => keys[e.key]=true;
+onkeyup = e => keys[e.key]=false;
 
-    // Физика
-    if(state.keys.l) player.vx = -player.speed;
-    else if(state.keys.r) player.vx = player.speed;
-    else player.vx *= 0.8;
+// ===== ФИЗИКА =====
+function update(){
 
-    if(state.keys.j && player.grounded) {
-        player.vy = player.jump;
-        player.grounded = false;
-    }
+  // движение
+  if(keys["a"]) player.vx = -player.speed;
+  else if(keys["d"]) player.vx = player.speed;
+  else player.vx *= 0.8;
 
-    player.vy += 0.8; // Гравитация
-    player.x += player.vx;
-    player.y += player.vy;
-
-    // Камера
-    state.camX += (player.x - state.camX - cw/3) * 0.1;
-
-    // Коллизии
+  // прыжок
+  if(keys["w"] && player.grounded){
+    player.vy = -player.jump;
     player.grounded = false;
-    objects.platforms.forEach(p => {
-        if(player.x < p.x + p.w && player.x + player.w > p.x &&
-           player.y + player.h > p.y && player.y < p.y + p.h) {
-            if(player.vy > 0) {
-                player.y = p.y - player.h;
-                player.vy = 0;
-                player.grounded = true;
-                if(p.data && !p.hit) {
-                    showModal(p.data);
-                    p.hit = true;
-                }
-            }
+  }
+
+  player.vy += gravity;
+
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // коллизия платформ
+  player.grounded = false;
+  platforms.forEach(p=>{
+    if(player.x < p.x+p.w &&
+       player.x+player.w > p.x &&
+       player.y+player.h < p.y+20 &&
+       player.y+player.h+player.vy >= p.y){
+
+        player.y = p.y - player.h;
+        player.vy = 0;
+        player.grounded = true;
+    }
+  });
+
+  // монеты
+  coins = coins.filter(c=>{
+    if(Math.abs(player.x-c.x)<40 && Math.abs(player.y-c.y)<40){
+      score++;
+      return false;
+    }
+    return true;
+  });
+
+  // враги
+  enemies.forEach(e=>{
+    if(!e.alive) return;
+
+    e.x += e.vx;
+
+    if(e.x < 0 || e.x > 2000) e.vx *= -1;
+
+    // столкновение
+    if(player.x < e.x+e.w &&
+       player.x+player.w > e.x &&
+       player.y < e.y+e.h &&
+       player.y+player.h > e.y){
+
+        // прыжок сверху = убийство
+        if(player.vy > 0 && player.y < e.y){
+          e.alive = false;
+          player.vy = -10;
+        } else {
+          player.hp--;
+          player.x -= 50;
         }
-    });
+    }
+  });
 
-    if(player.y > ch) { player.x = 100; player.y = ch-200; } // Респаун
+  // смерть
+  if(player.hp <= 0){
+    alert("GAME OVER");
+    location.reload();
+  }
+
+  // камера
+  cameraX = player.x - 200;
 }
 
-function draw() {
-    ctx.fillStyle = '#050510';
-    ctx.fillRect(0, 0, cw, ch);
+// ===== РЕНДЕР =====
+function draw(){
 
-    // 1. Параллакс фон
-    objects.bgElements.forEach(el => {
-        ctx.fillStyle = el.color;
-        ctx.fillRect(el.x - state.camX * el.layer, el.y, el.w, el.h);
-        // Окошки в зданиях
-        ctx.fillStyle = 'rgba(0, 242, 255, 0.1)';
-        ctx.fillRect(el.x - state.camX * el.layer + 20, el.y + 50, 20, 20);
-    });
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    ctx.save();
-    ctx.translate(-state.camX, 0);
+  // параллакс
+  bg.forEach((b,i)=>{
+    let speed = [0.2,0.5,0.8][i];
+    let x = -cameraX * speed % canvas.width;
 
-    // 2. Платформы (Киберпанк-стиль)
-    objects.platforms.forEach(p => {
-        // Тело платформы
-        ctx.fillStyle = 'rgba(0, 242, 255, 0.05)';
-        ctx.fillRect(p.x, p.y, p.w, p.h);
-        // Неоновая грань
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#00f2ff';
-        ctx.strokeStyle = '#00f2ff';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(p.x, p.y, p.w, p.h);
-        ctx.shadowBlur = 0;
-    });
+    ctx.drawImage(b, x, 0, canvas.width, canvas.height);
+    ctx.drawImage(b, x+canvas.width, 0, canvas.width, canvas.height);
+  });
 
-    // 3. Игрок (Темный силуэт с контуром)
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = '#ff00ff';
-    ctx.fillStyle = '#000';
-    ctx.fillRect(player.x, player.y, player.w, player.h);
-    ctx.strokeStyle = '#ff00ff';
-    ctx.strokeRect(player.x, player.y, player.w, player.h);
-    ctx.shadowBlur = 0;
+  // платформы
+  platforms.forEach(p=>{
+    ctx.drawImage(platformImg, p.x-cameraX, p.y, p.w, p.h);
+  });
 
-    ctx.restore();
+  // монеты
+  coins.forEach(c=>{
+    ctx.drawImage(coinImg, c.x-cameraX, c.y, 32,32);
+  });
+
+  // враги
+  enemies.forEach(e=>{
+    if(e.alive)
+      ctx.drawImage(enemyImg, e.x-cameraX, e.y, e.w, e.h);
+  });
+
+  // выбор спрайта
+  let sprite = sprites.idle;
+
+  if(!player.grounded){
+    sprite = player.vy < 0 ? sprites.jump : sprites.fall;
+  } else if(Math.abs(player.vx)>1){
+    player.tick++;
+    if(player.tick%10==0)
+      player.frame = (player.frame+1)%sprites.run.length;
+
+    sprite = sprites.run[player.frame];
+  }
+
+  ctx.drawImage(sprite, 200, player.y, player.w, player.h);
+
+  // UI
+  ctx.fillStyle="white";
+  ctx.font="20px Arial";
+  ctx.fillText("Coins: "+score, 20,30);
+  ctx.fillText("HP: "+player.hp, 20,60);
 }
 
-function loop() { update(); draw(); requestAnimationFrame(loop); }
-
-function showModal(data) {
-    state.modalOpen = true;
-    document.getElementById('m-title').innerText = data.t;
-    document.getElementById('m-body').innerText = data.b;
-    document.getElementById('modal').style.display = 'block';
+// ===== LOOP =====
+function loop(){
+  update();
+  draw();
+  requestAnimationFrame(loop);
 }
 
-function closeModal() {
-    state.modalOpen = false;
-    document.getElementById('modal').style.display = 'none';
-}
+loop();
 
-// Управление
-const bind = (id, k) => {
-    const el = document.getElementById(id);
-    el.onmousedown = el.ontouchstart = (e) => { e.preventDefault(); state.keys[k] = true; };
-    el.onmouseup = el.ontouchend = (e) => { e.preventDefault(); state.keys[k] = false; };
-};
-bind('l-btn', 'l'); bind('r-btn', 'r'); bind('j-btn', 'j');
-
-window.onload = init;
 </script>
 </body>
 </html>
