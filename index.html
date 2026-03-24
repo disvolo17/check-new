@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Cyber Mario</title>
+<title>Mario Clean</title>
 
 <style>
 body { margin:0; overflow:hidden; background:#000; }
@@ -15,7 +15,7 @@ canvas { display:block; }
 <canvas id="game"></canvas>
 
 <script>
-window.onload = function(){
+window.onload = function() {
 
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -23,178 +23,168 @@ const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// === ПРОСТАЯ ВЕРСИЯ БЕЗ КАРТИНОК (чтобы 100% работало) ===
-
 let player = {
-  x:100,
-  y:100,
-  w:50,
-  h:50,
-  vx:0,
-  vy:0,
-  gravity:0.6,
-  jump:-12,
-  grounded:false,
-  jumps:0,
-  maxJumps:2
+  x: 100,
+  y: 100,
+  w: 50,
+  h: 50,
+  vx: 0,
+  vy: 0,
+  gravity: 0.6,
+  jump: -12,
+  grounded: false,
+  jumps: 0,
+  maxJumps: 2
 };
 
 let keys = {};
 let platforms = [];
+let enemies = [];
 
-for(let i=0;i<20;i++){
+for (let i = 0; i < 20; i++) {
   platforms.push({
-    x:i*200,
-    y:400 + Math.sin(i)100,
-    w:180,
-    h:20
+    x: i * 200,
+    y: 400 + Math.sin(i) * 100,
+    w: 180,
+    h: 20
   });
 }
 
-let enemies = [];
-
-for(let i=0;i<10;i++){
+for (let i = 0; i < 10; i++) {
   enemies.push({
-    x:i300+200,
-    y:350,
-    w:40,
-    h:40,
-    vx:2,
-    alive:true
+    x: i * 300 + 200,
+    y: 350,
+    w: 40,
+    h: 40,
+    vx: 2,
+    alive: true
   });
 }
 
 let cameraX = 0;
 let state = "start";
 
-// управление
-window.addEventListener("keydown", e=>{
-  keys[e.code]=true;
+window.addEventListener("keydown", function(e) {
+  keys[e.code] = true;
 
-  if(state==="start" && e.code==="Enter"){
-    state="game";
+  if (state === "start" && e.code === "Enter") {
+    state = "game";
   }
 
-  if(state==="gameover" && e.code==="Enter"){
+  if (state === "gameover" && e.code === "Enter") {
     location.reload();
   }
 });
 
-window.addEventListener("keyup", e=>{
-  keys[e.code]=false;
+window.addEventListener("keyup", function(e) {
+  keys[e.code] = false;
 });
 
-function update(){
+function update() {
 
-if(state!=="game") return;
+  if (state !== "game") return;
 
-player.vx = 0;
+  player.vx = 0;
 
-if(keys["ArrowRight"]) player.vx = 5;
-if(keys["ArrowLeft"]) player.vx = -5;
+  if (keys["ArrowRight"]) player.vx = 5;
+  if (keys["ArrowLeft"]) player.vx = -5;
 
-if(keys["Space"]){
-  if(player.jumps < player.maxJumps){
-    player.vy = player.jump;
-    player.jumps++;
-    keys["Space"]=false;
-  }
-}
-
-player.vy += player.gravity;
-
-player.x += player.vx;
-player.y += player.vy;
-
-player.grounded=false;
-
-// платформы
-platforms.forEach(p=>{
-  if(
-    player.x < p.x+p.w &&
-    player.x+player.w > p.x &&
-    player.y < p.y+p.h &&
-    player.y+player.h > p.y
-  ){
-    if(player.vy > 0){
-      player.y = p.y - player.h;
-      player.vy = 0;
-      player.grounded=true;
-      player.jumps=0;
+  if (keys["Space"]) {
+    if (player.jumps < player.maxJumps) {
+      player.vy = player.jump;
+      player.jumps++;
+      keys["Space"] = false;
     }
   }
-});
 
-// враги
-enemies.forEach(e=>{
-  if(!e.alive) return;
+  player.vy += player.gravity;
 
-  e.x += e.vx;
+  player.x += player.vx;
+  player.y += player.vy;
 
-  if(
-    player.x < e.x+e.w &&
-    player.x+player.w > e.x &&
-    player.y < e.y+e.h &&
-    player.y+player.h > e.y
-  ){
-    if(player.vy > 0){
-      e.alive=false;
-      player.vy = -10;
-    } else {
-      state="gameover";
+  player.grounded = false;
+
+  platforms.forEach(function(p) {
+    if (
+      player.x < p.x + p.w &&
+      player.x + player.w > p.x &&
+      player.y < p.y + p.h &&
+      player.y + player.h > p.y
+    ) {
+      if (player.vy > 0) {
+        player.y = p.y - player.h;
+        player.vy = 0;
+        player.grounded = true;
+        player.jumps = 0;
+      }
     }
+  });
+
+  enemies.forEach(function(e) {
+    if (!e.alive) return;
+
+    e.x += e.vx;
+
+    if (
+      player.x < e.x + e.w &&
+      player.x + player.w > e.x &&
+      player.y < e.y + e.h &&
+      player.y + player.h > e.y
+    ) {
+      if (player.vy > 0) {
+        e.alive = false;
+        player.vy = -10;
+      } else {
+        state = "gameover";
+      }
+    }
+  });
+
+  if (player.y > canvas.height) {
+    state = "gameover";
   }
-});
 
-if(player.y > canvas.height){
-  state="gameover";
+  cameraX = player.x - canvas.width / 2;
 }
 
-cameraX = player.x - canvas.width/2;
-}
+function draw() {
 
-function draw(){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-ctx.clearRect(0,0,canvas.width,canvas.height);
+  if (state === "start") {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-if(state==="start"){
-  ctx.fillStyle="black";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  ctx.fillStyle="white";
-  ctx.font="40px Arial";
-  ctx.fillText("CYBER MARIO", canvas.width/2-140, canvas.height/2-40);
-  ctx.fillText("ENTER - START", canvas.width/2-140, canvas.height/2+20);
-  return;
-}
-
-// платформы
-ctx.fillStyle="purple";
-platforms.forEach(p=>{
-  ctx.fillRect(p.x-cameraX,p.y,p.w,p.h);
-});
-
-// враги
-ctx.fillStyle="red";
-enemies.forEach(e=>{
-  if(e.alive){
-    ctx.fillRect(e.x-cameraX,e.y,e.w,e.h);
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.fillText("CYBER MARIO", canvas.width / 2 - 140, canvas.height / 2 - 40);
+    ctx.fillText("ENTER - START", canvas.width / 2 - 140, canvas.height / 2 + 20);
+    return;
   }
-});
 
-// игрок
-ctx.fillStyle="cyan";
-ctx.fillRect(player.x-cameraX,player.y,player.w,player.h);
+  ctx.fillStyle = "purple";
+  platforms.forEach(function(p) {
+    ctx.fillRect(p.x - cameraX, p.y, p.w, p.h);
+  });
 
-if(state==="gameover"){
-  ctx.fillStyle="red";
-  ctx.font="50px Arial";
-  ctx.fillText("GAME OVER", canvas.width/2-150, canvas.height/2);
+  ctx.fillStyle = "red";
+  enemies.forEach(function(e) {
+    if (e.alive) {
+      ctx.fillRect(e.x - cameraX, e.y, e.w, e.h);
+    }
+  });
+
+  ctx.fillStyle = "cyan";
+  ctx.fillRect(player.x - cameraX, player.y, player.w, player.h);
+
+  if (state === "gameover") {
+    ctx.fillStyle = "red";
+    ctx.font = "50px Arial";
+    ctx.fillText("GAME OVER", canvas.width / 2 - 150, canvas.height / 2);
+  }
 }
 
-}
-
-function loop(){
+function loop() {
   update();
   draw();
   requestAnimationFrame(loop);
