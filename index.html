@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Interactive CV | Dubai Conference 2026</title>
+    <title>Interactive CV | Disvolo Edition</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
@@ -19,45 +19,41 @@
             font-family: 'Press Start 2P', cursive; color: white;
         }
 
-        /* 📺 CRT Эффект для стиля */
-        body::after {
-            content: " ";
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%);
-            background-size: 100% 4px;
-            z-index: 1000; pointer-events: none;
-        }
-
         #game-viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-        #world { position: absolute; bottom: 0; left: 0; width: 5000px; height: 100%; transition: transform 0.1s ease-out; }
 
-        /* 🏃 ИГРОК */
+        /* --- ПАРАЛЛАКС СЛОИ --- */
+        .parallax {
+            position: absolute; top: 0; left: 0; height: 100%; width: 10000px;
+            background-repeat: repeat-x; background-position: bottom left;
+            will-change: transform; image-rendering: pixelated;
+        }
+        #bg1 { background-image: url('bg1.png'); z-index: 1; background-size: contain; }
+        #bg2 { background-image: url('bg2.png'); z-index: 2; background-size: contain; }
+        #bg3 { background-image: url('bg3.png'); z-index: 3; background-size: contain; }
+
+        /* --- ИГРОВОЙ МИР --- */
+        #world { position: absolute; bottom: 0; left: 0; width: 10000px; height: 100%; z-index: 10; }
+
         #player {
-            position: absolute;
-            width: 60px; height: 80px;
-            background-image: url('player.png'); /* ТВОЙ НОВЫЙ СПРАЙТ */
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            z-index: 100;
-            will-change: transform;
-            image-rendering: pixelated; /* Сохраняем четкость пикселей */
+            position: absolute; width: 60px; height: 80px;
+            background-image: url('player.png'); background-size: contain;
+            background-repeat: no-repeat; background-position: center;
+            z-index: 100; will-change: transform; image-rendering: pixelated;
+            /* Плавный поворот персонажа */
+            transition: transform 0.1s linear;
         }
 
-        /* 🧱 БЛОКИ */
         .block {
             position: absolute; width: 50px; height: 50px;
             background: var(--brick); border: 4px solid #d35400;
             display: flex; align-items: center; justify-content: center;
-            font-size: 20px; z-index: 50;
+            font-size: 20px; z-index: 50; box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
         }
-        .block.hit { background: #95a5a6; border-color: #7f8c8d; color: #bdc3c7; }
+        .block.hit { background: #95a5a6; border-color: #7f8c8d; color: #bdc3c7; box-shadow: none; }
         .block-dl { background: var(--gold); border-color: #b8860b; color: #b8860b; }
 
-        /* 📄 КАРТОЧКИ ИНФО */
         .resume-card {
-            position: absolute; padding: 15px;
-            background: rgba(255, 255, 255, 0.95);
+            position: absolute; padding: 15px; background: white;
             border: 3px solid var(--gold); border-radius: 10px;
             width: 280px; font-size: 9px; line-height: 1.6; color: #333;
             z-index: 200; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
@@ -69,7 +65,6 @@
             100% { transform: translateY(-140px) scale(1); opacity: 1; }
         }
 
-        /* 🛠 UI */
         .ui { position: fixed; top: 20px; left: 20px; z-index: 1000; text-shadow: 2px 2px #000; }
         #ground { position: absolute; bottom: 0; width: 100%; height: 60px; background: #8B4513; border-top: 5px solid #5D2E0C; }
     </style>
@@ -78,16 +73,19 @@
 
 <div class="ui">
     <div>SCORE: <span id="score-val">2500</span></div>
-    <div style="font-size: 8px; margin-top: 10px;">PROGRESS: 40% | WORLD: 1-DUBAI</div>
+    <div style="font-size: 8px; margin-top: 10px;">WORLD: 1-DUBAI | [SPACE] JUMP</div>
 </div>
 
 <div id="game-viewport">
+    <div id="bg1" class="parallax"></div>
+    <div id="bg2" class="parallax"></div>
+    <div id="bg3" class="parallax"></div>
+
     <div id="world">
-        <div class="block" style="left: 450px; bottom: 220px;" data-info="<strong>EXPERIENCE:</strong><br>Freelance Web Dev (2 years).<br>Expert in Game Mechanics & UI interactivity.">?</div>
-        <div class="block" style="left: 750px; bottom: 280px;" data-info="<strong>STACK:</strong><br>JS (ES6+), React, Vue.js.<br>Master of HTML5 Canvas & CSS Art.">?</div>
-        <div class="block" style="left: 1050px; bottom: 220px;" data-info="<strong>PROJECTS:</strong><br>Pixel-art engines, Custom Dashboards, Interactive Portfolios.">?</div>
+        <div class="block" style="left: 500px; bottom: 220px;" data-info="<strong>EXPERIENCE:</strong><br>Freelance Web Dev (2 years).<br>Expert in Game Mechanics & UI.">?</div>
+        <div class="block" style="left: 850px; bottom: 300px;" data-info="<strong>STACK:</strong><br>JS (ES6+), React, Vue.js.<br>Canvas & CSS Animations.">?</div>
         
-        <div class="block block-dl" id="dl-block" style="left: 1450px; bottom: 250px;" data-info="<strong>DOWNLOADED!</strong><br>Full Resume (PDF) is now in your downloads.">💾</div>
+        <div class="block block-dl" id="dl-block" style="left: 1300px; bottom: 250px;" data-info="<strong>DOWNLOADED!</strong><br>Резюме сохранено в загрузки.">💾</div>
         
         <div id="player" style="left: 100px; bottom: 60px;"></div>
         <div id="ground"></div>
@@ -98,10 +96,11 @@
     const player = document.getElementById('player');
     const world = document.getElementById('world');
     const scoreVal = document.getElementById('score-val');
+    const bgs = [document.getElementById('bg1'), document.getElementById('bg2'), document.getElementById('bg3')];
     
     let state = {
         x: 100, y: 60, vy: 0, 
-        vx: 0, // горизонтальная скорость для поворота
+        lastDir: 1, // 1 - вправо, -1 - влево
         isGrounded: true,
         cameraX: 0,
         score: 2500,
@@ -120,7 +119,7 @@
 
     function downloadResume() {
         const link = document.createElement('a');
-        link.href = 'resume.pdf'; // ТУТ ССЫЛКА НА ТВОЙ PDF
+        link.href = 'resume.pdf'; 
         link.download = 'Disvolo_Resume.pdf';
         link.click();
     }
@@ -135,10 +134,17 @@
     }
 
     function update() {
-        state.vx = 0;
-        if (state.keys['ArrowRight']) { state.x += config.speed; state.vx = 1; }
-        if (state.keys['ArrowLeft']) { state.x -= config.speed; state.vx = -1; }
+        // Движение и анимация поворота
+        if (state.keys['ArrowRight']) { 
+            state.x += config.speed; 
+            state.lastDir = 1; 
+        }
+        if (state.keys['ArrowLeft']) { 
+            state.x -= config.speed; 
+            state.lastDir = -1; 
+        }
 
+        // Прыжок
         if (state.keys['Space'] && state.isGrounded) {
             state.vy = config.jump;
             state.isGrounded = false;
@@ -153,25 +159,23 @@
             state.isGrounded = true;
         }
 
-        // Коллизии с блоками
+        // Столкновение с блоками
         document.querySelectorAll('.block:not(.hit)').forEach(block => {
             const bx = parseInt(block.style.left);
             const by = parseInt(block.style.bottom);
             
             if (state.x + 40 > bx && state.x < bx + 50 && 
                 state.y + 75 >= by && state.y + 75 <= by + 20 && state.vy < 0) {
-                
                 state.vy = 5;
                 block.classList.add('hit');
                 state.score += 500;
                 scoreVal.innerText = state.score;
-                
                 spawnInfo(bx, by, block.dataset.info);
                 if(block.id === 'dl-block') downloadResume();
             }
         });
 
-        // Плавная камера
+        // Камера
         const targetCam = state.x - window.innerWidth / 3;
         state.cameraX += (targetCam - state.cameraX) * 0.1;
         
@@ -180,14 +184,20 @@
     }
 
     function render() {
-        // Поворот персонажа в зависимости от направления
-        let flip = state.vx < 0 ? 'scaleX(-1)' : (state.vx > 0 ? 'scaleX(1)' : '');
+        // 🏃 Анимация: отзеркаливание персонажа
+        const flip = state.lastDir === -1 ? 'scaleX(-1)' : 'scaleX(1)';
         player.style.transform = `translate3d(${state.x}px, ${-state.y}px, 0) ${flip}`;
+        
+        // 🌍 Движение мира
         world.style.transform = `translate3d(${-state.cameraX}px, 0, 0)`;
+
+        // 🖼 ПАРАЛЛАКС: Движение слоев фона с разной скоростью
+        bgs[0].style.transform = `translate3d(${-state.cameraX * 0.2}px, 0, 0)`; // Дальний (самый медленный)
+        bgs[1].style.transform = `translate3d(${-state.cameraX * 0.5}px, 0, 0)`; // Средний
+        bgs[2].style.transform = `translate3d(${-state.cameraX * 0.8}px, 0, 0)`; // Ближний
     }
 
     update();
 </script>
-
 </body>
 </html>
