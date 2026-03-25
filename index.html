@@ -3,201 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Interactive CV | Disvolo Edition</title>
+    <title>Denis - PM & Creative CV</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
-        :root {
-            --sky: #5c94fc;
-            --gold: #FFD700;
-            --brick: #E67E22;
-        }
-
-        body, html { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; background: var(--sky);
-            font-family: 'Press Start 2P', cursive; color: white;
-        }
-
-        #game-viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-
-        /* --- ПАРАЛЛАКС СЛОИ --- */
-        .parallax {
-            position: absolute; top: 0; left: 0; height: 100%; width: 10000px;
-            background-repeat: repeat-x; background-position: bottom left;
-            will-change: transform; image-rendering: pixelated;
-        }
-        #bg1 { background-image: url('bg1.png'); z-index: 1; background-size: contain; }
-        #bg2 { background-image: url('bg2.png'); z-index: 2; background-size: contain; }
-        #bg3 { background-image: url('bg3.png'); z-index: 3; background-size: contain; }
-
-        /* --- ИГРОВОЙ МИР --- */
-        #world { position: absolute; bottom: 0; left: 0; width: 10000px; height: 100%; z-index: 10; }
-
-        #player {
-            position: absolute; width: 60px; height: 80px;
-            background-image: url('player.png'); background-size: contain;
-            background-repeat: no-repeat; background-position: center;
-            z-index: 100; will-change: transform; image-rendering: pixelated;
-            /* Плавный поворот персонажа */
-            transition: transform 0.1s linear;
-        }
-
-        .block {
-            position: absolute; width: 50px; height: 50px;
-            background: var(--brick); border: 4px solid #d35400;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 20px; z-index: 50; box-shadow: 4px 4px 0 rgba(0,0,0,0.2);
-        }
-        .block.hit { background: #95a5a6; border-color: #7f8c8d; color: #bdc3c7; box-shadow: none; }
-        .block-dl { background: var(--gold); border-color: #b8860b; color: #b8860b; }
-
-        .resume-card {
-            position: absolute; padding: 15px; background: white;
-            border: 3px solid var(--gold); border-radius: 10px;
-            width: 280px; font-size: 9px; line-height: 1.6; color: #333;
-            z-index: 200; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            animation: slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
-
-        @keyframes slideUp {
-            0% { transform: translateY(0) scale(0.5); opacity: 0; }
-            100% { transform: translateY(-140px) scale(1); opacity: 1; }
-        }
-
-        .ui { position: fixed; top: 20px; left: 20px; z-index: 1000; text-shadow: 2px 2px #000; }
-        #ground { position: absolute; bottom: 0; width: 100%; height: 60px; background: #8B4513; border-top: 5px solid #5D2E0C; }
+        body { margin: 0; overflow: hidden; background: #050505; font-family: 'Press Start 2P', cursive; touch-action: manipulation; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 20px; left: 0; right: 0; color: #00ff00; font-size: 10px; text-align: center; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; line-height: 1.6; padding: 0 10px; }
+        #progress { position: absolute; top: 20px; right: 20px; color: #FFD700; font-size: 10px; z-index: 10; }
+        .controls { position: absolute; bottom: 30px; width: 100%; display: none; justify-content: space-between; padding: 0 40px; box-sizing: border-box; user-select: none; z-index: 20; }
+        .btn { width: 65px; height: 65px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; backdrop-filter: blur(5px); }
+        .btn:active { background: rgba(0, 255, 0, 0.3); transform: scale(0.9); }
+        @media (pointer: coarse) { .controls { display: flex; } }
     </style>
 </head>
 <body>
 
-<div class="ui">
-    <div>SCORE: <span id="score-val">2500</span></div>
-    <div style="font-size: 8px; margin-top: 10px;">WORLD: 1-DUBAI | [SPACE] JUMP</div>
-</div>
+<div id="ui">РАЗБИВАЙ БЛОКИ, ЧТОБЫ УЗНАТЬ ОПЫТ ДЕНИСА</div>
+<div id="progress">0/7</div>
+<canvas id="game"></canvas>
 
-<div id="game-viewport">
-    <div id="bg1" class="parallax"></div>
-    <div id="bg2" class="parallax"></div>
-    <div id="bg3" class="parallax"></div>
-
-    <div id="world">
-        <div class="block" style="left: 500px; bottom: 220px;" data-info="<strong>EXPERIENCE:</strong><br>Freelance Web Dev (2 years).<br>Expert in Game Mechanics & UI.">?</div>
-        <div class="block" style="left: 850px; bottom: 300px;" data-info="<strong>STACK:</strong><br>JS (ES6+), React, Vue.js.<br>Canvas & CSS Animations.">?</div>
-        
-        <div class="block block-dl" id="dl-block" style="left: 1300px; bottom: 250px;" data-info="<strong>DOWNLOADED!</strong><br>Резюме сохранено в загрузки.">💾</div>
-        
-        <div id="player" style="left: 100px; bottom: 60px;"></div>
-        <div id="ground"></div>
+<div class="controls">
+    <div style="display: flex; gap: 20px;">
+        <div class="btn" id="btnLeft">←</div>
+        <div class="btn" id="btnRight">→</div>
     </div>
+    <div class="btn" id="btnJump">UP</div>
 </div>
 
 <script>
-    const player = document.getElementById('player');
-    const world = document.getElementById('world');
-    const scoreVal = document.getElementById('score-val');
-    const bgs = [document.getElementById('bg1'), document.getElementById('bg2'), document.getElementById('bg3')];
-    
-    let state = {
-        x: 100, y: 60, vy: 0, 
-        lastDir: 1, // 1 - вправо, -1 - влево
-        isGrounded: true,
-        cameraX: 0,
-        score: 2500,
-        keys: {}
-    };
+window.addEventListener("load", () => {
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const ui = document.getElementById("ui");
+    const progressText = document.getElementById("progress");
 
-    const config = {
-        gravity: 0.8,
-        jump: -17,
-        speed: 8,
-        ground: 60
-    };
-
-    window.onkeydown = (e) => state.keys[e.code] = true;
-    window.onkeyup = (e) => state.keys[e.code] = false;
-
-    function downloadResume() {
-        const link = document.createElement('a');
-        link.href = 'resume.pdf'; 
-        link.download = 'Disvolo_Resume.pdf';
-        link.click();
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
     }
+    window.addEventListener('resize', resize);
+    resize();
 
-    function spawnInfo(x, y, text) {
-        const card = document.createElement('div');
-        card.className = 'resume-card';
-        card.style.left = (x - 110) + 'px';
-        card.style.bottom = y + 'px';
-        card.innerHTML = text;
-        world.appendChild(card);
-    }
-
-    function update() {
-        // Движение и анимация поворота
-        if (state.keys['ArrowRight']) { 
-            state.x += config.speed; 
-            state.lastDir = 1; 
-        }
-        if (state.keys['ArrowLeft']) { 
-            state.x -= config.speed; 
-            state.lastDir = -1; 
-        }
-
-        // Прыжок
-        if (state.keys['Space'] && state.isGrounded) {
-            state.vy = config.jump;
-            state.isGrounded = false;
-        }
-
-        state.vy += config.gravity;
-        state.y -= state.vy;
-
-        if (state.y <= config.ground) {
-            state.y = config.ground;
-            state.vy = 0;
-            state.isGrounded = true;
-        }
-
-        // Столкновение с блоками
-        document.querySelectorAll('.block:not(.hit)').forEach(block => {
-            const bx = parseInt(block.style.left);
-            const by = parseInt(block.style.bottom);
-            
-            if (state.x + 40 > bx && state.x < bx + 50 && 
-                state.y + 75 >= by && state.y + 75 <= by + 20 && state.vy < 0) {
-                state.vy = 5;
-                block.classList.add('hit');
-                state.score += 500;
-                scoreVal.innerText = state.score;
-                spawnInfo(bx, by, block.dataset.info);
-                if(block.id === 'dl-block') downloadResume();
-            }
+    function load(src) {
+        return new Promise(res => {
+            const img = new Image();
+            img.src = src;
+            img.onload = () => res(img);
+            img.onerror = () => res(null);
         });
-
-        // Камера
-        const targetCam = state.x - window.innerWidth / 3;
-        state.cameraX += (targetCam - state.cameraX) * 0.1;
-        
-        render();
-        requestAnimationFrame(update);
     }
 
-    function render() {
-        // 🏃 Анимация: отзеркаливание персонажа
-        const flip = state.lastDir === -1 ? 'scaleX(-1)' : 'scaleX(1)';
-        player.style.transform = `translate3d(${state.x}px, ${-state.y}px, 0) ${flip}`;
-        
-        // 🌍 Движение мира
-        world.style.transform = `translate3d(${-state.cameraX}px, 0, 0)`;
+    (async function() {
+        const sprites = {
+            idle: await load("idle.png"),
+            jump: await load("jump.png"),
+            fall: await load("fall.png"),
+            run: [await load("run.png"), await load("run1.png"), await load("run2.png"), await load("run3.png")]
+        };
+        const bgs = [await load("bg1.png"), await load("bg2.png"), await load("bg3.png")];
+        const platformImg = await load("platform.png");
 
-        // 🖼 ПАРАЛЛАКС: Движение слоев фона с разной скоростью
-        bgs[0].style.transform = `translate3d(${-state.cameraX * 0.2}px, 0, 0)`; // Дальний (самый медленный)
-        bgs[1].style.transform = `translate3d(${-state.cameraX * 0.5}px, 0, 0)`; // Средний
-        bgs[2].style.transform = `translate3d(${-state.cameraX * 0.8}px, 0, 0)`; // Ближний
-    }
+        let player = {
+            x: 100, y: 100, w: 64, h: 64, vx: 0, vy: 0, 
+            accel: 0.8, friction: 0.85, maxSpeed: 7, gravity: 0.7, jumpPower: -15,
+            grounded: false, jumps: 0, maxJumps: 2, frame: 0, dir: 1
+        };
 
-    update();
+        let cameraX = 0, lerpCameraX = 0;
+        let keys = { left: false, right: false };
+        let blocksHitCount = 0, isFinished = false, fireworks = [];
+
+        let resumeBlocks = [
+            { x: 700, y: 350, text: "ДЕНИС — PROJECT MANAGER & CREATIVE PRODUCER", hit: false, offset: 0 },
+            { x: 1400, y: 280, text: "ЭКСПЕРТИЗА: РАБОТА С ТОПОВЫМИ АРТИСТАМИ", hit: false, offset: 0 },
+            { x: 2100, y: 350, text: "ТУРЫ: ОРГАНИЗАЦИЯ КОНЦЕРТОВ И ЛОГИСТИКА", hit: false, offset: 0 },
+            { x: 2800, y: 280, text: "MANAGEMENT: ВЕДЕНИЕ КРЕАТИВНЫХ ПРОЕКТОВ", hit: false, offset: 0 },
+            { x: 3500, y: 350, text: "SKILLS: БЮДЖЕТЫ, КОМАНДА, ДЕДЛАЙНЫ", hit: false, offset: 0 },
+            { x: 4200, y: 280, text: "ШОУ: СОЗДАНИЕ МАСШТАБНОГО КОНТЕНТА", hit: false, offset: 0 },
+            { x: 4900, y: 350, text: "TG: @disvolo | DISVOLO17.GITHUB.IO", hit: false, offset: 0 }
+        ];
+
+        let platforms = [];
+        for (let i = 0; i < 100; i++) {
+            platforms.push({ x: i * 320, y: canvas.height - 180 + Math.sin(i * 0.7) * 60, w: 220, h: 35 });
+        }
+
+        const finishLine = 5600;
+
+        function createFirework() {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * (canvas.height / 2);
+            const colors = ['#0f0', '#ff0', '#f0f', '#0ff', '#fff'];
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            for (let i = 0; i < 20; i++) {
+                fireworks.push({
+                    x, y, 
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0, color
+                });
+            }
+        }
+
+        function doJump() {
+            if (player.jumps < player.maxJumps && !isFinished) {
+                player.vy = player.jumpPower;
+                player.jumps++;
+            }
+        }
+
+        // Кнопки
+        const bindBtn = (id, key) => {
+            const el = document.getElementById(id);
+            el.addEventListener("touchstart", (e) => { e.preventDefault(); if(key==='jump') doJump(); else keys[key] = true; });
+            el.addEventListener("touchend", (e) => { e.preventDefault(); if(key!=='jump') keys[key] = false; });
+        };
+        bindBtn("btnLeft", "left"); bindBtn("btnRight", "right"); bindBtn("btnJump", "jump");
+        window.addEventListener("keydown", e => { if (e.code === "ArrowLeft") keys.left = true; if (e.code === "ArrowRight") keys.right = true; if (e.code === "Space") doJump(); });
+        window.addEventListener("keyup", e => { if (e.code === "ArrowLeft") keys.left = false; if (e.code === "ArrowRight") keys.right = false; });
+
+        function update() {
+            if (!isFinished) {
+                if (keys.left) { player.vx -= player.accel; player.dir = -1; }
+                else if (keys.right) { player.vx += player.accel; player.dir = 1; }
+                else { player.vx *= player.friction; }
+            } else {
+                player.vx *= 0.9; // Тормозим на финише
+                if (player.grounded) player.vy = -12; // Прыгаем от радости
+                if (Math.random() < 0.1) createFirework();
+            }
+
+            if (player.vx > player.maxSpeed) player.vx = player.maxSpeed;
+            if (player.vx < -player.maxSpeed) player.vx = -player.maxSpeed;
+
+            player.vy += player.gravity;
+            player.x += player.vx;
+            player.y += player.vy;
+
+            player.grounded = false;
+            platforms.forEach(p => {
+                if (player.x + 15 < p.x + p.w && player.x + player.w - 15 > p.x && player.y + player.h > p.y && player.y + player.h < p.y + p.h + 25) {
+                    if (player.vy > 0) { player.y = p.y - player.h; player.vy = 0; player.grounded = true; player.jumps = 0; }
+                }
+            });
+
+            resumeBlocks.forEach(b => {
+                b.offset *= 0.8;
+                if (player.x + player.w > b.x && player.x < b.x + 60 && player.y < b.y + 60 + b.offset && player.y + player.h > b.y + b.offset) {
+                    if (player.vy < 0 && player.y > b.y + 20) {
+                        player.vy = 4; b.offset = -15;
+                        if (!b.hit) { b.hit = true; blocksHitCount++; progressText.innerText = `${blocksHitCount}/7`; }
+                        ui.innerText = b.text;
+                    }
+                }
+            });
+
+            if (player.x > finishLine && !isFinished) {
+                isFinished = true;
+                ui.style.color = "#FFD700";
+                ui.innerText = "DENIS IS READY FOR YOUR PROJECT!";
+                setTimeout(() => { window.location.href = "https://disvolo17.github.io/work/"; }, 4000);
+            }
+
+            if (player.y > canvas.height + 200) { player.x = 100; player.y = 100; player.vx = 0; player.vy = 0; }
+            cameraX = player.x - canvas.width / 2;
+            lerpCameraX += (cameraX - lerpCameraX) * 0.1;
+
+            fireworks.forEach((f, i) => {
+                f.x += f.vx; f.y += f.vy; f.life -= 0.02;
+                if (f.life <= 0) fireworks.splice(i, 1);
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            bgs.forEach((bg, i) => {
+                if (!bg) return;
+                let speed = [0.15, 0.4, 0.7][i];
+                let x = -(lerpCameraX * speed) % canvas.width;
+                ctx.drawImage(bg, x, 0, canvas.width, canvas.height);
+                ctx.drawImage(bg, x + canvas.width, 0, canvas.width, canvas.height);
+                if (x > 0) ctx.drawImage(bg, x - canvas.width, 0, canvas.width, canvas.height);
+            });
+
+            platforms.forEach(p => {
+                if (platformImg) ctx.drawImage(platformImg, p.x - lerpCameraX, p.y, p.w, p.h);
+                else { ctx.fillStyle = "#1a1a1a"; ctx.fillRect(p.x - lerpCameraX, p.y, p.w, p.h); }
+            });
+
+            resumeBlocks.forEach(b => {
+                ctx.save(); ctx.translate(0, b.offset);
+                ctx.fillStyle = b.hit ? "#222" : "#FFD700";
+                ctx.fillRect(b.x - lerpCameraX, b.y, 60, 60);
+                if (!b.hit) { ctx.fillStyle = "#000"; ctx.font = "bold 30px Arial"; ctx.fillText("?", b.x - lerpCameraX + 18, b.y + 42); }
+                ctx.restore();
+            });
+
+            // Салют
+            fireworks.forEach(f => {
+                ctx.globalAlpha = f.life;
+                ctx.fillStyle = f.color;
+                ctx.fillRect(f.x, f.y, 4, 4);
+            });
+            ctx.globalAlpha = 1.0;
+
+            // Игрок
+            let img = sprites.idle;
+            if (!player.grounded) img = (player.vy < 0) ? sprites.jump : sprites.fall;
+            else if (Math.abs(player.vx) > 0.5 || isFinished) {
+                player.frame += 0.2;
+                img = sprites.run[Math.floor(player.frame) % 4];
+            }
+
+            ctx.save();
+            if (player.dir === -1) { ctx.translate(player.x - lerpCameraX + player.w, player.y); ctx.scale(-1, 1); ctx.drawImage(img || new Image(), 0, 0, player.w, player.h); }
+            else { ctx.drawImage(img || new Image(), player.x - lerpCameraX, player.y, player.w, player.h); }
+            ctx.restore();
+
+            requestAnimationFrame(draw);
+        }
+        setInterval(update, 1000/60); draw();
+    })();
+});
 </script>
 </body>
 </html>
