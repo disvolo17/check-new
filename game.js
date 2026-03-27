@@ -1,108 +1,101 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+// Вставь это в свой (async function() { ... })
 
-// Настройки графики
-const SCALE = 3;
-const TILE_SIZE = 16 * SCALE;
-
-// Загрузка твоих моделей
-const playerImg = new Image();
-playerImg.src = 'player.png'; // Твой файл
-
-const world = {
-    gravity: 0.8,
-    groundY: 0,
-    blocks: [
-        { x: 100, y: 300, type: 'q', content: "Senior Frontend Developer", hit: false },
-        { x: 250, y: 200, type: 'q', content: "React / Vue / JS", hit: false },
-        { x: 150, y: 450, type: 'brick', hit: false }
-    ]
+// 1. Загружаем новые спрайты
+const sprites = {
+    idle: await load("idle.png"),
+    jump: await load("jump.png"),
+    fall: await load("fall.png"),
+    run: [await load("run.png"), await load("run1.png"), await load("run2.png"), await load("run3.png")],
+    // Ассеты врага
+    eIdle: await load("tank_nut_IDLE.png"),
+    eHit: await load("tank_nut_HIT.png"),
+    eDeath: await load("tank_nut_DEATH.png")
 };
 
-const player = {
-    x: 50, y: 0, w: 24 * SCALE, h: 32 * SCALE,
-    vx: 0, vy: 0, speed: 6, jump: -16,
-    grounded: false, flip: false
-};
+// ... (код игрока и платформ)
 
-function init() {
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    world.groundY = canvas.height - 80;
-    player.y = world.groundY - player.h;
-    loop();
-}
+// 2. Настраиваем врагов с учетом состояний
+let enemies = [
+    { 
+        x: 1200, y: ground.y - 48, w: 48, h: 48, vx: -2, 
+        state: 'IDLE', // Возможные: IDLE, HIT, DEAD
+        timer: 0, 
+        alive: true 
+    },
+    { 
+        x: 2800, y: ground.y - 48, w: 48, h: 48, vx: -2, 
+        state: 'IDLE', 
+        timer: 0, 
+        alive: true 
+    }
+];
 
 function update() {
-    // Управление (включая сенсор)
-    player.vy += world.gravity;
-    player.x += player.vx;
-    player.y += player.vy;
+    // ... (логика игрока)
 
-    // Столкновение с полом
-    if (player.y + player.h > world.groundY) {
-        player.y = world.groundY - player.h;
-        player.vy = 0;
-        player.grounded = true;
-    }
+    enemies.forEach(en => {
+        if (!en.alive && en.state !== 'DEAD') return;
 
-    // Логика удара головой о кубики
-    world.blocks.forEach(block => {
-        if (player.vy < 0 && 
-            player.x + player.w > block.x && player.x < block.x + TILE_SIZE &&
-            player.y < block.y + TILE_SIZE && player.y > block.y) {
-                player.vy = 4; // Отскок вниз
-                if (!block.hit) {
-                    block.hit = true;
-                    console.log("ВЫБИТ ТЕКСТ:", block.content);
-                    // Здесь можно вызвать всплывающий текст в небе
-                }
+        // Если жив или в процессе анимации смерти — двигаем/обновляем
+        if (en.state === 'IDLE') {
+            en.x += en.vx;
+            if (en.x < 100 || en.x > finishLine) en.vx *= -1;
+        }
+
+        // Таймеры для временных состояний
+        if (en.timer > 0) en.timer--;
+
+        // Если таймер HIT закончился, возвращаем в IDLE (если еще жив)
+        if (en.state === 'HIT' && en.timer === 0) en.state = 'IDLE';
+
+        // Если таймер DEAD закончился, окончательно убираем
+        if (en.state === 'DEAD' && en.timer === 0) en.alive = false;
+
+        // Столкновение
+        if (en.alive && en.state === 'IDLE' && 
+            player.x + player.w > en.x && player.x < en.x + en.w && 
+            player.y + player.h > en.y && player.y < en.y + en.h) {
+            
+            if (player.vy > 0) { // Прыжок сверху
+                player.vy = -10;
+                en.state = 'HIT';
+                en.timer = 10; // Короткая вспышка удара
+                
+                // Через мгновение переходим в смерть
+                setTimeout(() => {
+                    en.state = 'DEAD';
+                    en.timer = 30; // Длительность анимации смерти перед исчезновением
+                }, 150);
+            } else {
+                // Игрок коснулся сбоку — респаун
+                player.x = 100;
+                player.y = 100;
+            }
         }
     });
 }
 
 function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // ... (отрисовка фона и игрока)
 
-    // Рисуем землю
-    ctx.fillStyle = '#9b4b28';
-    ctx.fillRect(0, world.groundY, canvas.width, 80);
+    enemies.forEach(en => {
+        if (!en.alive && en.state !== 'DEAD') return;
 
-    // Рисуем блоки
-    world.blocks.forEach(b => {
-        ctx.fillStyle = b.hit ? '#555' : '#f09030';
-        ctx.fillRect(b.x, b.y, TILE_SIZE, TILE_SIZE);
-        ctx.strokeStyle = '#000';
-        ctx.strokeRect(b.x, b.y, TILE_SIZE, TILE_SIZE);
-    });
+        let currentImg = sprites.eIdle;
+        if (en.state === 'HIT') currentImg = sprites.eHit;
+        if (en.state === 'DEAD') currentImg = sprites.eDeath;
 
-    // Рисуем ТВОЮ МОДЕЛЬКУ
-    if (playerImg.complete) {
-        ctx.save();
-        if (player.flip) {
-            ctx.scale(-1, 1);
-            ctx.drawImage(playerImg, -player.x - player.w, player.y, player.w, player.h);
-        } else {
-            ctx.drawImage(playerImg, player.x, player.y, player.w, player.h);
+        if (currentImg) {
+            ctx.save();
+            // Разворачиваем врага в сторону движения
+            if (en.vx > 0) {
+                ctx.translate(en.x - lerpCameraX + en.w, en.y);
+                ctx.scale(-1, 1);
+                ctx.drawImage(currentImg, 0, 0, en.w, en.h);
+            } else {
+                ctx.drawImage(currentImg, en.x - lerpCameraX, en.y, en.w, en.h);
+            }
+            ctx.restore();
         }
-        ctx.restore();
-    } else {
-        // Если картинка еще не загрузилась — рисуем красный квадрат
-        ctx.fillStyle = 'red';
-        ctx.fillRect(player.x, player.y, player.w, player.h);
-    }
+    });
 }
-
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
-
-// Слушатели кнопок (Сенсор)
-document.getElementById('btn-left').ontouchstart = () => { player.vx = -player.speed; player.flip = true; };
-document.getElementById('btn-right').ontouchstart = () => { player.vx = player.speed; player.flip = false; };
-document.getElementById('btn-left').ontouchend = document.getElementById('btn-right').ontouchend = () => player.vx = 0;
-document.getElementById('btn-jump').ontouchstart = () => { if(player.grounded) player.vy = player.jump; player.grounded = false; };
-
-window.onload = init;
