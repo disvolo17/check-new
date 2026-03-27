@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Denis - PM Dubai CV Game</title>
+    <title>Denis - PM Dubai Action Game</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; touch-action: manipulation; }
         canvas { display: block; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; padding: 20px; box-sizing: border-box; }
         #lives { color: #ff0000; font-size: 20px; text-shadow: 2px 2px #000; }
         #boss-bar { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); width: 300px; height: 15px; border: 3px solid #fff; display: none; background: #222; }
         #boss-hp { width: 100%; height: 100%; background: #f00; transition: width 0.2s; }
-        #joke-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); color: #0f0; display: none; align-items: center; justify-content: center; text-align: center; font-size: 28px; padding: 50px; z-index: 100; text-transform: uppercase; line-height: 1.6; font-weight: bold; }
+        #joke-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); color: #0f0; display: none; align-items: center; justify-content: center; text-align: center; font-size: 24px; padding: 40px; z-index: 100; text-transform: uppercase; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -21,7 +21,9 @@
     <div id="lives">ЖИЗНИ: ♥♥♥</div>
     <div id="boss-bar"><div id="boss-hp"></div></div>
 </div>
+
 <div id="joke-overlay">АНЕКДОТ</div>
+
 <canvas id="game"></canvas>
 
 <script>
@@ -32,10 +34,10 @@ window.addEventListener("load", () => {
 
     const jokes = [
         "ПРОДЖЕКТ-МЕНЕДЖЕР — ЭТО ЧЕЛОВЕК, КОТОРЫЙ СЧИТАЕТ, ЧТО 9 ЖЕНЩИН МОГУТ РОДИТЬ РЕБЕНКА ЗА МЕСЯЦ!",
-        "ЗАКАЗЧИК: 'МЫ ХОТИМ ВСЁ И ВЧЕРА'. ПМ: 'НИ СЛОВА БОЛЬШЕ, ВОТ ВАМ СЧЕТ И ГАЛЛЮЦИНАЦИЯ БЭКЛОГА!'",
+        "ЗАКАЗЧИК: 'МЫ ХОТИМ ВСЁ И ВЧЕРА'. ПМ: 'ВОТ ВАМ СЧЕТ И ГАЛЛЮЦИНАЦИЯ БЭКЛОГА!'",
         "ДЕБАТЫ ПМ-А: 'МЫ НЕ ОПАЗДЫВАЕМ, МЫ ПРОСТО ПЕРЕОСМЫСЛИВАЕМ ПОНЯТИЕ ВРЕМЕНИ!'",
         "ЧЕМ ОТЛИЧАЕТСЯ ПМ ОТ ТЕРРОРИСТА? С ТЕРРОРИСТОМ МОЖНО ДОГОВОРИТЬСЯ!",
-        "ПРОГРАММИСТ: 'ТУТ ДЕЛ НА НЕДЕЛЮ'. ПМ В ПЛАНЕ: 'ОТЛИЧНО, ЗАПИШУ КАК ПОЛТОРА ЧАСА'.",
+        "ПРОГРАММИСТ: 'ТУТ ДЕЛ НА НЕДЕЛЮ'. ПМ В ПЛАНЕ: 'ОТЛИЧНО, ЗАПИСЫВАЮ 2 ЧАСА'.",
         "БЭКЛОГ — ЭТО КЛАДБИЩЕ ХОРОШИХ ИДЕЙ, КОТОРЫЕ УБИЛ БЮДЖЕТ!"
     ];
 
@@ -67,38 +69,41 @@ window.addEventListener("load", () => {
         const GROUND_Y = canvas.height - 120;
 
         let player = {
-            x: 150, y: GROUND_Y - 120, w: 75, h: 125, // Вытянули вверх
-            vx: 0, vy: 0, accel: 0.5, friction: 0.9, maxSpeed: 6.5, gravity: 0.7, jumpPower: -16,
+            startX: 100, startY: GROUND_Y - 130,
+            x: 100, y: GROUND_Y - 130, w: 75, h: 130, 
+            vx: 0, vy: 0, accel: 0.5, friction: 0.88, maxSpeed: 6, gravity: 0.7, jumpPower: -16,
             grounded: false, jumps: 0, maxJumps: 2, frame: 0, dir: 1, lives: 3
         };
 
         let bullets = [];
         let fireballs = [];
         let enemies = [];
-        let boss = { x: 5200, y: GROUND_Y - 200, w: 200, h: 200, vx: -2.5, vy: 0, hp: 10, active: false, shotTimer: 0 };
+        let boss = { x: 5500, y: GROUND_Y - 220, w: 220, h: 220, vx: -2.5, vy: 0, hp: 10, active: false, shotTimer: 0 };
         let cameraX = 0, lerpCameraX = 0;
         let keys = { a: false, d: false };
 
-        // Маленькие враги Little.png
-        for(let i=0; i<5; i++) {
-            enemies.push({ x: 1300 + i*950, y: GROUND_Y - 60, w: 60, h: 60, vx: -2.5, vy: 0, alive: true });
-        }
-
-        let blocks = [
-            { x: 900, y: GROUND_Y - 260, hit: false },
-            { x: 1900, y: GROUND_Y - 300, hit: false },
-            { x: 2900, y: GROUND_Y - 260, hit: false },
-            { x: 4100, y: GROUND_Y - 300, hit: false }
+        // 5 КУБИКОВ С АНЕКДОТАМИ
+        let jokeBlocks = [
+            { x: 800, y: GROUND_Y - 260, hit: false },
+            { x: 1600, y: GROUND_Y - 300, hit: false },
+            { x: 2400, y: GROUND_Y - 260, hit: false },
+            { x: 3200, y: GROUND_Y - 300, hit: false },
+            { x: 4000, y: GROUND_Y - 260, hit: false }
         ];
+
+        // Маленькие враги Little.png
+        for(let i=0; i<6; i++) {
+            enemies.push({ x: 1200 + i*850, y: GROUND_Y - 60, w: 60, h: 60, vx: -3, vy: 0, alive: true });
+        }
 
         window.addEventListener("keydown", e => {
             if (e.code === "KeyA") keys.a = true;
             if (e.code === "KeyD") keys.d = true;
-            if (e.code === "KeyW") {
-                if(player.jumps < player.maxJumps) { player.vy = player.jumpPower; player.jumps++; player.grounded = false; }
+            if (e.code === "KeyW" && player.jumps < player.maxJumps) {
+                player.vy = player.jumpPower; player.jumps++; player.grounded = false;
             }
             if (e.code === "Space") {
-                bullets.push({ x: player.x + (player.dir === 1 ? player.w : 0), y: player.y + 50, vx: player.dir * 12 });
+                bullets.push({ x: player.x + (player.dir === 1 ? player.w : 0), y: player.y + 60, vx: player.dir * 12 });
             }
         });
         window.addEventListener("keyup", e => {
@@ -118,23 +123,24 @@ window.addEventListener("load", () => {
             player.x += player.vx;
             player.y += player.vy;
 
-            // ТВЕРДЫЙ ПОЛ
+            // ТВЕРДЫЙ ТЕКСТУРИРОВАННЫЙ ПОЛ
             if (player.y + player.h > GROUND_Y) {
                 player.y = GROUND_Y - player.h;
                 player.vy = 0; player.grounded = true; player.jumps = 0;
             }
 
-            // Золотые блоки с юмором
-            blocks.forEach(b => {
-                if (!b.hit && player.x + player.w > b.x && player.x < b.x + 60 && player.vy < 0 && player.y < b.y + 65 && player.y > b.y) {
-                    b.hit = true; player.vy = 6;
+            // Обработка кубиков «УДАРЬ МЕНЯ»
+            jokeBlocks.forEach(b => {
+                if (!b.hit && player.x + player.w > b.x && player.x < b.x + 80 && player.vy < 0 && player.y < b.y + 80 && player.y > b.y) {
+                    b.hit = true;
+                    player.vy = 5;
                     jokeOverlay.innerText = jokes[Math.floor(Math.random() * jokes.length)];
                     jokeOverlay.style.display = "flex";
-                    setTimeout(() => jokeOverlay.style.display = "none", 3500);
+                    setTimeout(() => jokeOverlay.style.display = "none", 4000);
                 }
             });
 
-            // Пули игрока
+            // Пули и Враги
             bullets.forEach((bull, i) => {
                 bull.x += bull.vx;
                 enemies.forEach(en => {
@@ -148,45 +154,44 @@ window.addEventListener("load", () => {
                 }
             });
 
-            // Little.png ИИ
+            // Little.png
             enemies.forEach(en => {
                 if (!en.alive) return;
                 en.x += en.vx;
                 if (en.x < 100 || en.x > 6000) en.vx *= -1;
-                // Маленькие прыжки для Little
-                if (Math.random() < 0.01 && en.y + en.h >= GROUND_Y) en.vy = -10;
+                if (Math.random() < 0.01 && en.y + en.h >= GROUND_Y) en.vy = -12;
                 en.vy += 0.6; en.y += en.vy;
                 if (en.y + en.h > GROUND_Y) { en.y = GROUND_Y - en.h; en.vy = 0; }
 
                 if (player.x + player.w > en.x && player.x < en.x + en.w && player.y + player.h > en.y && player.y < en.y + en.h) {
-                    player.lives--; player.x -= 150;
+                    player.lives--; player.x = player.startX;
                     document.getElementById("lives").innerText = "ЖИЗНИ: " + "♥".repeat(player.lives);
                     if(player.lives <= 0) location.reload();
                 }
             });
 
-            // БОСС Big.png
+            // Босс
             if (player.x > 4500) {
                 boss.active = true;
                 document.getElementById("boss-bar").style.display = "block";
             }
             if (boss.active && boss.hp > 0) {
                 boss.x += boss.vx;
-                if (boss.x < 4800 || boss.x > 5600) boss.vx *= -1;
-                if (Math.random() < 0.02 && boss.y + boss.h >= GROUND_Y) boss.vy = -14;
+                if (boss.x < 4800 || boss.x > 5800) boss.vx *= -1;
+                if (Math.random() < 0.02 && boss.y + boss.h >= GROUND_Y) boss.vy = -15;
                 boss.vy += 0.6; boss.y += boss.vy;
                 if (boss.y + boss.h > GROUND_Y) { boss.y = GROUND_Y - boss.h; boss.vy = 0; }
 
                 boss.shotTimer++;
-                if (boss.shotTimer > 90) { // Огненные шары
-                    fireballs.push({ x: boss.x, y: boss.y + 80, vx: -6 });
+                if (boss.shotTimer > 100) {
+                    fireballs.push({ x: boss.x, y: boss.y + 100, vx: -5 });
                     boss.shotTimer = 0;
                 }
             }
 
             fireballs.forEach((f, i) => {
                 f.x += f.vx;
-                if (player.x + player.w > f.x && player.x < f.x + 35 && player.y + player.h > f.y && player.y < f.y + 35) {
+                if (player.x + player.w > f.x && player.x < f.x + 30 && player.y + player.h > f.y && player.y < f.y + 30) {
                     player.lives--; fireballs.splice(i, 1);
                     document.getElementById("lives").innerText = "ЖИЗНИ: " + "♥".repeat(player.lives);
                 }
@@ -194,41 +199,46 @@ window.addEventListener("load", () => {
 
             if (boss.hp <= 0 && boss.active) {
                 boss.active = false;
-                jokeOverlay.innerText = "БОСС ПОВЕРЖЕН! ДЕНИС ГОТОВ К РАБОТЕ!";
+                jokeOverlay.innerText = "БОСС ПОВЕРЖЕН! СКАЧИВАЮ РЕЗЮМЕ...";
                 jokeOverlay.style.display = "flex";
                 const link = document.createElement('a'); link.href = 'resume.pdf'; link.download = 'Denis_CV.pdf'; link.click();
                 setTimeout(() => window.location.href = "https://disvolo17.github.io/work/", 4000);
             }
 
             cameraX = player.x - canvas.width / 2;
-            lerpCameraX += (cameraX - lerpCameraX) * 0.07;
+            lerpCameraX += (cameraX - lerpCameraX) * 0.08;
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // ФОН (Параллакс)
+            // ФОН
             bgs.forEach((bg, i) => {
                 if (!bg) return;
-                let speed = [0.12, 0.35, 0.65][i];
+                let speed = [0.1, 0.3, 0.6][i];
                 let x = -(lerpCameraX * speed) % canvas.width;
                 ctx.drawImage(bg, x, 0, canvas.width, canvas.height);
                 ctx.drawImage(bg, x + canvas.width, 0, canvas.width, canvas.height);
             });
 
-            // РЕНДЕР ПОЛА (Земля + Трава)
-            ctx.fillStyle = "#4d2e1a"; // Глубокая почва
+            // ТВЕРДЫЙ ПОЛ ТЕКСТУРОЙ
+            ctx.fillStyle = "#3d2516"; // Почва
             ctx.fillRect(0, GROUND_Y, canvas.width, 120);
-            ctx.fillStyle = "#27ae60"; // Слой травы
+            ctx.fillStyle = "#2ecc71"; // Трава
             ctx.fillRect(0, GROUND_Y, canvas.width, 15);
-            ctx.fillStyle = "#2ecc71"; // Яркая кромка
+            ctx.fillStyle = "#27ae60"; // Кромка травы
             ctx.fillRect(0, GROUND_Y, canvas.width, 4);
 
-            // Блоки
-            blocks.forEach(b => {
-                ctx.fillStyle = b.hit ? "#444" : "#f39c12";
-                ctx.fillRect(b.x - lerpCameraX, b.y, 60, 60);
-                if(!b.hit) { ctx.fillStyle="#fff"; ctx.font="bold 20px Arial"; ctx.fillText("?", b.x - lerpCameraX + 22, b.y + 38); }
+            // Кубики «УДАРЬ МЕНЯ»
+            jokeBlocks.forEach(b => {
+                ctx.fillStyle = b.hit ? "#333" : "#f1c40f";
+                ctx.fillRect(b.x - lerpCameraX, b.y, 80, 80);
+                if(!b.hit) {
+                    ctx.fillStyle = "#000";
+                    ctx.font = "bold 10px Arial";
+                    ctx.fillText("УДАРЬ", b.x - lerpCameraX + 15, b.y + 35);
+                    ctx.fillText("МЕНЯ", b.x - lerpCameraX + 18, b.y + 55);
+                }
             });
 
             // Little.png
@@ -241,14 +251,14 @@ window.addEventListener("load", () => {
                 ctx.drawImage(sprites.big, boss.x - lerpCameraX, boss.y, boss.w, boss.h);
             }
 
-            // Оружие
-            ctx.fillStyle = "#f1c40f"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 18, 6));
-            ctx.fillStyle = "#e74c3c"; fireballs.forEach(f => ctx.beginPath() || ctx.arc(f.x - lerpCameraX + 15, f.y + 15, 15, 0, Math.PI*2) || ctx.fill());
+            // Пули и Фаерболлы
+            ctx.fillStyle = "yellow"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 15, 6));
+            ctx.fillStyle = "red"; fireballs.forEach(f => ctx.fillRect(f.x - lerpCameraX, f.y, 30, 30));
 
             // Игрок
             let img = sprites.idle;
-            if (Math.abs(player.vx) > 0.8) {
-                player.frame += 0.22;
+            if (Math.abs(player.vx) > 0.5) {
+                player.frame += 0.2;
                 img = sprites.run[Math.floor(player.frame) % 4] || sprites.idle;
             }
             ctx.save();
