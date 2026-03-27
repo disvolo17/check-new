@@ -6,46 +6,37 @@
     <title>Denis - PM Dubai CV Game</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; touch-action: manipulation; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; }
         canvas { display: block; }
-        #game-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; color: #fff; font-size: 10px; padding: 20px; }
-        #lives { position: absolute; top: 20px; left: 20px; color: #ff0000; font-size: 20px; text-shadow: 2px 2px #000; }
-        #top-info { position: absolute; top: 20px; left: 0; right: 0; text-align: center; color: #00ff00; }
-        
-        #boss-ui { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 300px; height: 15px; border: 2px solid #fff; display: none; background: #222; }
-        #boss-hp { width: 100%; height: 100%; background: #ff0000; transition: width 0.2s; }
-        #boss-name { position: absolute; top: -15px; left: 0; color: #fff; font-size: 8px; }
-
-        #fullscreen-joke { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); color: #00ff00; font-size: 40px; display: none; align-items: center; justify-content: center; text-align: center; z-index: 50; padding: 50px; text-transform: uppercase; line-height: 1.5; font-weight: bold; animation: pulseRed 1s infinite alternate; }
-        @keyframes pulseRed { from { color: #00ff00; } to { color: #55ff55; text-shadow: 0 0 20px #00ff00; } }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; padding: 20px; box-sizing: border-box; }
+        #lives { color: #ff0000; font-size: 20px; text-shadow: 2px 2px #000; }
+        #boss-bar { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); width: 300px; height: 15px; border: 3px solid #fff; display: none; background: #222; }
+        #boss-hp { width: 100%; height: 100%; background: #f00; transition: width 0.2s; }
+        #joke-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); color: #0f0; display: none; align-items: center; justify-content: center; text-align: center; font-size: 28px; padding: 50px; z-index: 100; text-transform: uppercase; line-height: 1.6; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div id="game-ui">
-    <div id="lives">♥♥♥</div>
-    <div id="top-info">A, D - MOVE | W - JUMP | SPACE - SHOOT</div>
-    <div id="boss-ui">
-        <div id="boss-name">BIG BOSS (PM's Backlog)</div>
-        <div id="boss-hp"></div>
-    </div>
+<div id="ui-layer">
+    <div id="lives">ЖИЗНИ: ♥♥♥</div>
+    <div id="boss-bar"><div id="boss-hp"></div></div>
 </div>
-
-<div id="fullscreen-joke">PM JOKE...</div>
+<div id="joke-overlay">АНЕКДОТ</div>
 <canvas id="game"></canvas>
 
 <script>
 window.addEventListener("load", () => {
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
-    const jokeEl = document.getElementById("fullscreen-joke");
+    const jokeOverlay = document.getElementById("joke-overlay");
 
     const jokes = [
-        "JOKE: A PM walks into a bar and orders a beer, 0 beers, 9999999 beers, a lizard in a glass...",
-        "JOKE: Nine women cannot have a baby in one month.",
-        "JOKE: Deadline is like the horizon line; beautiful but unachievable.",
-        "JOKE: We don't have bugs; we have undocumented features!",
-        "JOKE: Plan? We don't need no stinking plans."
+        "ПРОДЖЕКТ-МЕНЕДЖЕР — ЭТО ЧЕЛОВЕК, КОТОРЫЙ СЧИТАЕТ, ЧТО 9 ЖЕНЩИН МОГУТ РОДИТЬ РЕБЕНКА ЗА МЕСЯЦ!",
+        "ЗАКАЗЧИК: 'МЫ ХОТИМ ВСЁ И ВЧЕРА'. ПМ: 'НИ СЛОВА БОЛЬШЕ, ВОТ ВАМ СЧЕТ И ГАЛЛЮЦИНАЦИЯ БЭКЛОГА!'",
+        "ДЕБАТЫ ПМ-А: 'МЫ НЕ ОПАЗДЫВАЕМ, МЫ ПРОСТО ПЕРЕОСМЫСЛИВАЕМ ПОНЯТИЕ ВРЕМЕНИ!'",
+        "ЧЕМ ОТЛИЧАЕТСЯ ПМ ОТ ТЕРРОРИСТА? С ТЕРРОРИСТОМ МОЖНО ДОГОВОРИТЬСЯ!",
+        "ПРОГРАММИСТ: 'ТУТ ДЕЛ НА НЕДЕЛЮ'. ПМ В ПЛАНЕ: 'ОТЛИЧНО, ЗАПИШУ КАК ПОЛТОРА ЧАСА'.",
+        "БЭКЛОГ — ЭТО КЛАДБИЩЕ ХОРОШИХ ИДЕЙ, КОТОРЫЕ УБИЛ БЮДЖЕТ!"
     ];
 
     function resize() {
@@ -73,58 +64,41 @@ window.addEventListener("load", () => {
         };
         const bgs = [await load("bg1.png"), await load("bg2.png"), await load("bg3.png")];
 
-        const GROUND_Y = canvas.height - 100;
+        const GROUND_Y = canvas.height - 120;
 
-        // FIXED PLAYER PHYSICS: Smooth & Controllable
         let player = {
-            startX: 100, startY: GROUND_Y - 110,
-            x: 100, y: GROUND_Y - 110, w: 60, h: 100, // Slightly resized for better fit
-            vx: 0, vy: 0, 
-            accel: 0.8, friction: 0.9, maxSpeed: 7, // Realistically fast, not jerky
-            gravity: 0.6, jumpPower: -14,
-            grounded: false, jumps: 0, maxJumps: 2, frame: 0, dir: 1,
-            lives: 3
+            x: 150, y: GROUND_Y - 120, w: 75, h: 125, // Вытянули вверх
+            vx: 0, vy: 0, accel: 0.5, friction: 0.9, maxSpeed: 6.5, gravity: 0.7, jumpPower: -16,
+            grounded: false, jumps: 0, maxJumps: 2, frame: 0, dir: 1, lives: 3
         };
 
         let bullets = [];
         let fireballs = [];
         let enemies = [];
-        let fireworks = [];
-        
-        let boss = { 
-            startX: 5500, x: 5500, y: GROUND_Y - 180, w: 180, h: 180, 
-            vx: -3, vy: 0, gravity: 0.5, jumpTimer: 0, 
-            hp: 10, maxHp: 10, active: false, shotTimer: 0 
-        };
-
+        let boss = { x: 5200, y: GROUND_Y - 200, w: 200, h: 200, vx: -2.5, vy: 0, hp: 10, active: false, shotTimer: 0 };
         let cameraX = 0, lerpCameraX = 0;
         let keys = { a: false, d: false };
 
-        // Generate Little (Jumping Enemies)
-        for(let i=0; i<6; i++) {
-            enemies.push({ x: 1000 + i*750, startY: GROUND_Y - 50, y: GROUND_Y - 50, w: 50, h: 50, vx: -2, vy: 0, type: 'little' });
+        // Маленькие враги Little.png
+        for(let i=0; i<5; i++) {
+            enemies.push({ x: 1300 + i*950, y: GROUND_Y - 60, w: 60, h: 60, vx: -2.5, vy: 0, alive: true });
         }
 
-        let resumeBlocks = [
-            { x: 800, y: GROUND_Y - 240, hit: false },
-            { x: 1600, y: GROUND_Y - 240, hit: false },
-            { x: 2400, y: GROUND_Y - 240, hit: false },
-            { x: 4200, y: GROUND_Y - 240, hit: false }, // Block leading to boss arena
-            { x: 5700, y: GROUND_Y - 240, hit: false, isFile: true } // Actual download block
+        let blocks = [
+            { x: 900, y: GROUND_Y - 260, hit: false },
+            { x: 1900, y: GROUND_Y - 300, hit: false },
+            { x: 2900, y: GROUND_Y - 260, hit: false },
+            { x: 4100, y: GROUND_Y - 300, hit: false }
         ];
 
         window.addEventListener("keydown", e => {
             if (e.code === "KeyA") keys.a = true;
             if (e.code === "KeyD") keys.d = true;
-            if (e.code === "KeyW" && player.lives > 0) {
-                if(player.jumps < player.maxJumps) {
-                    player.vy = player.jumpPower;
-                    player.jumps++;
-                    player.grounded = false;
-                }
+            if (e.code === "KeyW") {
+                if(player.jumps < player.maxJumps) { player.vy = player.jumpPower; player.jumps++; player.grounded = false; }
             }
-            if (e.code === "Space" && player.lives > 0) {
-                bullets.push({ x: player.x + (player.dir === 1 ? player.w : 0), y: player.y + 40, vx: player.dir * 10 });
+            if (e.code === "Space") {
+                bullets.push({ x: player.x + (player.dir === 1 ? player.w : 0), y: player.y + 50, vx: player.dir * 12 });
             }
         });
         window.addEventListener("keyup", e => {
@@ -132,209 +106,159 @@ window.addEventListener("load", () => {
             if (e.code === "KeyD") keys.d = false;
         });
 
-        function playerHit() {
-            player.lives--;
-            document.getElementById("lives").innerText = "♥".repeat(player.lives);
-            if(player.lives > 0) {
-                // Respawn
-                player.x = player.startX;
-                player.y = player.startY;
-                player.vx = 0; player.vy = 0;
-            } else {
-                player.x = -1000; // Game Over state
-                document.getElementById("lives").innerText = "GAME OVER";
-                alert("GAME OVER! RELOAD TO TRY AGAIN.");
-            }
-        }
-
         function update() {
-            if(player.lives <= 0) return;
+            if (player.lives <= 0) return;
 
-            // Player movement logic (FIXED SMOOTHNESS)
+            // Логика игрока
             if (keys.a) { player.vx -= player.accel; player.dir = -1; }
             else if (keys.d) { player.vx += player.accel; player.dir = 1; }
             else { player.vx *= player.friction; }
-
-            // Clamp velocity
-            if (player.vx > player.maxSpeed) player.vx = player.maxSpeed;
-            if (player.vx < -player.maxSpeed) player.vx = -player.maxSpeed;
 
             player.vy += player.gravity;
             player.x += player.vx;
             player.y += player.vy;
 
+            // ТВЕРДЫЙ ПОЛ
             if (player.y + player.h > GROUND_Y) {
                 player.y = GROUND_Y - player.h;
-                player.vy = 0;
-                player.grounded = true;
-                player.jumps = 0;
+                player.vy = 0; player.grounded = true; player.jumps = 0;
             }
 
-            // Resume Blocks & Fullscreen Jokes
-            resumeBlocks.forEach(b => {
-                if (!b.hit && player.x + player.w > b.x && player.x < b.x + 60 && player.vy < 0 && player.y < b.y + 60 && player.y > b.y) {
-                    b.hit = true;
-                    player.vy = 4;
-                    
-                    // Show GIANT flashing joke overlay
-                    jokeEl.innerText = jokes[Math.floor(Math.random() * jokes.length)];
-                    jokeEl.style.display = 'flex';
-                    setTimeout(() => { jokeEl.style.display = 'none'; }, 3000); // Hide after 3s
-
-                    if(b.isFile) {
-                        const link = document.createElement('a');
-                        link.href = 'resume.pdf'; // Must exist in root
-                        link.download = 'Denis_Dubai_CV.pdf';
-                        link.click();
-                    }
+            // Золотые блоки с юмором
+            blocks.forEach(b => {
+                if (!b.hit && player.x + player.w > b.x && player.x < b.x + 60 && player.vy < 0 && player.y < b.y + 65 && player.y > b.y) {
+                    b.hit = true; player.vy = 6;
+                    jokeOverlay.innerText = jokes[Math.floor(Math.random() * jokes.length)];
+                    jokeOverlay.style.display = "flex";
+                    setTimeout(() => jokeOverlay.style.display = "none", 3500);
                 }
             });
 
-            // Bullets vs Enemies/Boss
-            bullets.forEach((bullet, bIdx) => {
-                bullet.x += bullet.vx;
-                if(Math.abs(bullet.x - player.x) > 800) bullets.splice(bIdx, 1); // Clean up range
-
-                enemies.forEach((en, eIdx) => {
-                    if (bullet.x > en.x && bullet.x < en.x + en.w && bullet.y > en.y && bullet.y < en.y + en.h) {
-                        enemies.splice(eIdx, 1); // Kill Little
-                        bullets.splice(bIdx, 1);
+            // Пули игрока
+            bullets.forEach((bull, i) => {
+                bull.x += bull.vx;
+                enemies.forEach(en => {
+                    if (en.alive && bull.x > en.x && bull.x < en.x + en.w && bull.y > en.y && bull.y < en.y + en.h) {
+                        en.alive = false; bullets.splice(i, 1);
                     }
                 });
-                
-                // Hit Boss
-                if (boss.active && bullet.x > boss.x && bullet.x < boss.x + boss.w && bullet.y > boss.y && bullet.y < boss.y + boss.h) {
-                    boss.hp--;
-                    bullets.splice(bIdx, 1);
-                    document.getElementById("boss-hp").style.width = (boss.hp / boss.maxHp * 100) + "%";
+                if (boss.active && bull.x > boss.x && bull.x < boss.x + boss.w && bull.y > boss.y && bull.y < boss.y + boss.h) {
+                    boss.hp--; bullets.splice(i, 1);
+                    document.getElementById("boss-hp").style.width = (boss.hp * 10) + "%";
                 }
             });
 
-            // Fireballs vs Player
-            fireballs.forEach((fb, fbIdx) => {
-                fb.x += fb.vx;
-                // Hit Player
-                if (fb.x > player.x && fb.x < player.x + player.w && fb.y > player.y && fb.y < player.y + player.h) {
-                    fireballs.splice(fbIdx, 1);
-                    playerHit();
-                }
-                if(Math.abs(fb.x - boss.x) > 1000) fireballs.splice(fbIdx, 1); // Clean up
-            });
-
-            // Little Logic (Jumping Enemies)
+            // Little.png ИИ
             enemies.forEach(en => {
+                if (!en.alive) return;
                 en.x += en.vx;
-                if(en.x < 100 || en.x > 5000) en.vx *= -1; // Patrol range
-
-                // Jump logic
-                if (Math.random() < 0.02 && en.y + en.h >= GROUND_Y) en.vy = -10;
-                en.vy += 0.5; en.y += en.vy;
+                if (en.x < 100 || en.x > 6000) en.vx *= -1;
+                // Маленькие прыжки для Little
+                if (Math.random() < 0.01 && en.y + en.h >= GROUND_Y) en.vy = -10;
+                en.vy += 0.6; en.y += en.vy;
                 if (en.y + en.h > GROUND_Y) { en.y = GROUND_Y - en.h; en.vy = 0; }
 
-                // Hit Player
                 if (player.x + player.w > en.x && player.x < en.x + en.w && player.y + player.h > en.y && player.y < en.y + en.h) {
-                    playerHit();
+                    player.lives--; player.x -= 150;
+                    document.getElementById("lives").innerText = "ЖИЗНИ: " + "♥".repeat(player.lives);
+                    if(player.lives <= 0) location.reload();
                 }
             });
 
-            // BOSS AI: DYNAMIC ACTION (Walk, Jump, Slow Fireballs)
-            if (player.x > 4500 && !boss.active) {
+            // БОСС Big.png
+            if (player.x > 4500) {
                 boss.active = true;
-                document.getElementById("boss-ui").style.display = "block";
+                document.getElementById("boss-bar").style.display = "block";
             }
-
             if (boss.active && boss.hp > 0) {
                 boss.x += boss.vx;
-                if (boss.x < boss.startX - 300 || boss.x > boss.startX + 100) boss.vx *= -1; // Patrol Dubai office area
-
-                // Boss Jump AI
-                boss.jumpTimer++;
-                if(boss.jumpTimer > 150 && boss.y + boss.h >= GROUND_Y) { // Jump every 2.5s
-                    boss.vy = -12;
-                    boss.jumpTimer = 0;
-                }
-                boss.vy += boss.gravity; boss.y += boss.vy;
+                if (boss.x < 4800 || boss.x > 5600) boss.vx *= -1;
+                if (Math.random() < 0.02 && boss.y + boss.h >= GROUND_Y) boss.vy = -14;
+                boss.vy += 0.6; boss.y += boss.vy;
                 if (boss.y + boss.h > GROUND_Y) { boss.y = GROUND_Y - boss.h; boss.vy = 0; }
 
-                // Boss Shoot AI: Med. Slow Fireballs
                 boss.shotTimer++;
-                if(boss.shotTimer > 80) { // Shoot every 1.3s
-                    let fbDir = (player.x < boss.x) ? -1 : 1;
-                    fireballs.push({ x: boss.x + (fbDir === 1 ? boss.w : 0), y: boss.y + 60, vx: fbDir * 4, w: 25, h: 25 });
+                if (boss.shotTimer > 90) { // Огненные шары
+                    fireballs.push({ x: boss.x, y: boss.y + 80, vx: -6 });
                     boss.shotTimer = 0;
                 }
             }
 
+            fireballs.forEach((f, i) => {
+                f.x += f.vx;
+                if (player.x + player.w > f.x && player.x < f.x + 35 && player.y + player.h > f.y && player.y < f.y + 35) {
+                    player.lives--; fireballs.splice(i, 1);
+                    document.getElementById("lives").innerText = "ЖИЗНИ: " + "♥".repeat(player.lives);
+                }
+            });
+
             if (boss.hp <= 0 && boss.active) {
                 boss.active = false;
-                jokeEl.innerText = "BOSS DEFEATED! DENIS IS READY FOR YOUR PROJECT!";
-                jokeEl.style.display = 'flex';
-                setTimeout(() => { window.location.href = "https://disvolo17.github.io/work/"; }, 4000);
+                jokeOverlay.innerText = "БОСС ПОВЕРЖЕН! ДЕНИС ГОТОВ К РАБОТЕ!";
+                jokeOverlay.style.display = "flex";
+                const link = document.createElement('a'); link.href = 'resume.pdf'; link.download = 'Denis_CV.pdf'; link.click();
+                setTimeout(() => window.location.href = "https://disvolo17.github.io/work/", 4000);
             }
 
-            // Camera System: Slow Lerp for smoothness
             cameraX = player.x - canvas.width / 2;
-            lerpCameraX += (cameraX - lerpCameraX) * 0.08;
+            lerpCameraX += (cameraX - lerpCameraX) * 0.07;
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // DRAW BACKGROUNDS (PARALLAX RESTORED)
+
+            // ФОН (Параллакс)
             bgs.forEach((bg, i) => {
                 if (!bg) return;
-                let speed = [0.15, 0.4, 0.7][i]; // Different speeds for depth
+                let speed = [0.12, 0.35, 0.65][i];
                 let x = -(lerpCameraX * speed) % canvas.width;
                 ctx.drawImage(bg, x, 0, canvas.width, canvas.height);
-                ctx.drawImage(bg, x + canvas.width, 0, canvas.width, canvas.height); // Endless tiling
-                if (x > 0) ctx.drawImage(bg, x - canvas.width, 0, canvas.width, canvas.height);
+                ctx.drawImage(bg, x + canvas.width, 0, canvas.width, canvas.height);
             });
 
-            // Ground
-            ctx.fillStyle = "#1a1a1a";
-            ctx.fillRect(0, GROUND_Y, canvas.width, 100);
+            // РЕНДЕР ПОЛА (Земля + Трава)
+            ctx.fillStyle = "#4d2e1a"; // Глубокая почва
+            ctx.fillRect(0, GROUND_Y, canvas.width, 120);
+            ctx.fillStyle = "#27ae60"; // Слой травы
+            ctx.fillRect(0, GROUND_Y, canvas.width, 15);
+            ctx.fillStyle = "#2ecc71"; // Яркая кромка
+            ctx.fillRect(0, GROUND_Y, canvas.width, 4);
 
-            // Blocks
-            resumeBlocks.forEach(b => {
-                ctx.fillStyle = b.hit ? "#333" : "#FFD700"; // Gold blocks
+            // Блоки
+            blocks.forEach(b => {
+                ctx.fillStyle = b.hit ? "#444" : "#f39c12";
                 ctx.fillRect(b.x - lerpCameraX, b.y, 60, 60);
-                if(!b.hit) { ctx.fillStyle="#000"; ctx.font="20px Arial"; ctx.fillText("?", b.x - lerpCameraX + 22, b.y + 38); }
+                if(!b.hit) { ctx.fillStyle="#fff"; ctx.font="bold 20px Arial"; ctx.fillText("?", b.x - lerpCameraX + 22, b.y + 38); }
             });
 
-            // Enemies Little
+            // Little.png
             enemies.forEach(en => {
-                if (sprites.little) ctx.drawImage(sprites.little, en.x - lerpCameraX, en.y, en.w, en.h);
+                if (en.alive && sprites.little) ctx.drawImage(sprites.little, en.x - lerpCameraX, en.y, en.w, en.h);
             });
 
-            // Boss
+            // Big.png
             if (boss.active && boss.hp > 0 && sprites.big) {
                 ctx.drawImage(sprites.big, boss.x - lerpCameraX, boss.y, boss.w, boss.h);
             }
 
-            // Projectiles
-            ctx.fillStyle = "#FFD700"; // Gold bullets
-            bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 10, 5));
-            ctx.fillStyle = "#ff3300"; // Red/Orange Fireballs
-            fireballs.forEach(fb => ctx.fillRect(fb.x - lerpCameraX, fb.y, fb.w, fb.h));
+            // Оружие
+            ctx.fillStyle = "#f1c40f"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 18, 6));
+            ctx.fillStyle = "#e74c3c"; fireballs.forEach(f => ctx.beginPath() || ctx.arc(f.x - lerpCameraX + 15, f.y + 15, 15, 0, Math.PI*2) || ctx.fill());
 
-            // Player (FIXED SMOOTH RUNNING ANIMATION)
-            if(player.lives > 0) {
-                let img = sprites.idle;
-                if (!player.grounded) img = sprites.idle; // Jump frame if needed
-                else if (Math.abs(player.vx) > 1.5) {
-                    player.frame += 0.2; // Realistically timed running
-                    img = sprites.run[Math.floor(player.frame) % 4];
-                }
-                ctx.save();
-                if (player.dir === -1) {
-                    ctx.translate(player.x - lerpCameraX + player.w, player.y);
-                    ctx.scale(-1, 1);
-                    ctx.drawImage(img || new Image(), 0, 0, player.w, player.h);
-                } else {
-                    ctx.drawImage(img || new Image(), player.x - lerpCameraX, player.y, player.w, player.h);
-                }
-                ctx.restore();
+            // Игрок
+            let img = sprites.idle;
+            if (Math.abs(player.vx) > 0.8) {
+                player.frame += 0.22;
+                img = sprites.run[Math.floor(player.frame) % 4] || sprites.idle;
             }
+            ctx.save();
+            if (player.dir === -1) {
+                ctx.translate(player.x - lerpCameraX + player.w, player.y); ctx.scale(-1, 1);
+                ctx.drawImage(img || new Image(), 0, 0, player.w, player.h);
+            } else {
+                ctx.drawImage(img || new Image(), player.x - lerpCameraX, player.y, player.w, player.h);
+            }
+            ctx.restore();
 
             requestAnimationFrame(draw);
         }
