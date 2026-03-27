@@ -13,13 +13,13 @@
         #boss-bar { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); width: 300px; height: 15px; border: 3px solid #fff; display: none; background: #222; }
         #boss-hp { width: 100%; height: 100%; background: #f00; transition: width 0.2s; }
         
-        /* Исправленный фон анекдотов: полупрозрачный, текст с обводкой для читаемости */
+        /* ИСПРАВЛЕНО: Зеленый текст и полупрозрачный фон */
         #joke-overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0, 0, 0, 0.4); color: #00ff00; display: none; 
+            background: rgba(0, 0, 0, 0.6); color: #00ff00; display: none; 
             align-items: center; justify-content: center; text-align: center; 
             font-size: 24px; padding: 40px; z-index: 100; text-transform: uppercase; line-height: 1.6;
-            text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            text-shadow: 2px 2px 0 #000;
         }
     </style>
 </head>
@@ -73,10 +73,12 @@ window.addEventListener("load", () => {
         const bgs = [await load("bg1.png"), await load("bg2.png"), await load("bg3.png")];
 
         const GROUND_Y = canvas.height - 120;
+        const FINISH_LINE_X = 6500; // Координата финиша
 
+        // ИСПРАВЛЕНА ФИЗИКА ГЕРОЯ
         let player = {
             x: 150, y: GROUND_Y - 130, w: 75, h: 130, 
-            vx: 0, vy: 0, accel: 0.8, friction: 0.82, maxSpeed: 8, gravity: 0.8, jumpPower: -18,
+            vx: 0, vy: 0, accel: 0.8, friction: 0.85, maxSpeed: 7, gravity: 0.8, jumpPower: -17,
             grounded: false, jumps: 0, maxJumps: 2, frame: 0, dir: 1, lives: 3
         };
 
@@ -84,14 +86,13 @@ window.addEventListener("load", () => {
         let fireballs = [];
         let enemies = [];
         
-        // Босс и Финиш
+        // БОСС
         let boss = { x: 5500, y: GROUND_Y - 220, w: 220, h: 220, vx: -2.5, vy: 0, hp: 10, active: false, shotTimer: 0 };
-        const FINISH_LINE_X = 6400; // Координата выхода
-
-        let lerpCameraX = 0;
+        
+        let cameraX = 0, lerpCameraX = 0;
         let keys = { a: false, d: false };
 
-        // 5 КУБИКОВ «УДАРЬ МЕНЯ» с анекдотами
+        // 5 КУБИКОВ АНЕКДОТОВ
         let jokeBlocks = [
             { x: 900, y: GROUND_Y - 280, hit: false },
             { x: 1700, y: GROUND_Y - 320, hit: false },
@@ -100,10 +101,10 @@ window.addEventListener("load", () => {
             { x: 4100, y: GROUND_Y - 280, hit: false }
         ];
 
-        // 1 КУБИК для PDF
+        // БЛОК ДЛЯ СКАЧИВАНИЯ PDF
         let cvBlock = { x: 4800, y: GROUND_Y - 280, hit: false };
 
-        // 5 Врагов
+        // 5 МАЛЕНЬКИХ ВРАГОВ
         for(let i=0; i<5; i++) {
             enemies.push({ x: 1200 + i*900, y: GROUND_Y - 90, w: 90, h: 90, vx: -3, vy: 0, alive: true });
         }
@@ -126,21 +127,23 @@ window.addEventListener("load", () => {
         function update() {
             if (player.lives <= 0) return;
 
-            // Движение
+            // ДВИЖЕНИЕ С ОГРАНИЧИТЕЛЕМ
             if (keys.a) { player.vx -= player.accel; player.dir = -1; }
             else if (keys.d) { player.vx += player.accel; player.dir = 1; }
             else { player.vx *= player.friction; }
 
-            // ИСПРАВЛЕНИЕ АНИМАЦИИ: Жесткая остановка героя
-            if (Math.abs(player.vx) < 0.5) player.vx = 0;
-
+            // Лимит скорости (чтобы не улетал в космос)
             if (player.vx > player.maxSpeed) player.vx = player.maxSpeed;
             if (player.vx < -player.maxSpeed) player.vx = -player.maxSpeed;
+            
+            // Жесткая остановка (чтобы анимация не зависала)
+            if (Math.abs(player.vx) < 0.5) player.vx = 0;
 
             player.vy += player.gravity;
             player.x += player.vx;
             player.y += player.vy;
 
+            // ТВЕРДЫЙ ПОЛ
             if (player.y + player.h > GROUND_Y) {
                 player.y = GROUND_Y - player.h;
                 player.vy = 0; player.grounded = true; player.jumps = 0;
@@ -156,12 +159,18 @@ window.addEventListener("load", () => {
                 }
             });
 
-            // Удар по блоку скачивания CV
+            // Удар по PDF Блоку
             if (!cvBlock.hit && player.x + player.w > cvBlock.x && player.x < cvBlock.x + 80 && player.vy < 0 && player.y < cvBlock.y + 80 && player.y > cvBlock.y) {
                 cvBlock.hit = true; player.vy = 6;
                 jokeOverlay.innerText = "СКАЧИВАЕМ РЕЗЮМЕ...";
                 jokeOverlay.style.display = "flex";
-                const link = document.createElement('a'); link.href = 'resume.pdf'; link.download = 'Denis_CV.pdf'; link.click();
+                
+                // Триггер скачивания PDF
+                const link = document.createElement('a'); 
+                link.href = 'resume.pdf'; 
+                link.download = 'Denis_CV.pdf'; 
+                link.click();
+                
                 setTimeout(() => jokeOverlay.style.display = "none", 2500);
             }
 
@@ -179,7 +188,7 @@ window.addEventListener("load", () => {
                 }
             });
 
-            // Враги
+            // Враги Little
             enemies.forEach(en => {
                 if (!en.alive) return;
                 en.x += en.vx;
@@ -195,16 +204,18 @@ window.addEventListener("load", () => {
                 }
             });
 
-            // БОСС (Активируется, когда подходишь близко)
+            // БОСС
             if (player.x > 5000) {
                 boss.active = true;
                 document.getElementById("boss-bar").style.display = "block";
             }
-
             if (boss.active && boss.hp > 0) {
                 boss.x += boss.vx;
                 if (boss.x < 5200 || boss.x > 6000) boss.vx *= -1;
-                
+                if (Math.random() < 0.02 && boss.y + boss.h >= GROUND_Y) boss.vy = -15;
+                boss.vy += 0.6; boss.y += boss.vy;
+                if (boss.y + boss.h > GROUND_Y) { boss.y = GROUND_Y - boss.h; boss.vy = 0; }
+
                 boss.shotTimer++;
                 if (boss.shotTimer > 90) {
                     fireballs.push({ x: boss.x, y: boss.y + 100, vx: -8 });
@@ -217,7 +228,6 @@ window.addEventListener("load", () => {
                 document.getElementById("boss-bar").style.display = "none";
             }
 
-            // Фаерболлы босса
             fireballs.forEach((f, i) => {
                 f.x += f.vx;
                 if (player.x + player.w > f.x && player.x < f.x + 30 && player.y + player.h > f.y && player.y < f.y + 30) {
@@ -227,19 +237,19 @@ window.addEventListener("load", () => {
                 }
             });
 
-            // ЛОГИКА ФИНИША
+            // ФИНИШ: ПЕРЕХОД НА САЙТ
             if (player.x > FINISH_LINE_X) {
                 window.location.href = "https://disvolo17.github.io/work/";
             }
 
-            // Камера
-            let targetCam = player.x - canvas.width / 2;
-            lerpCameraX += (targetCam - lerpCameraX) * 0.1;
+            cameraX = player.x - canvas.width / 2;
+            lerpCameraX += (cameraX - lerpCameraX) * 0.08;
         }
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // ФОН (Параллакс)
             bgs.forEach((bg, i) => {
                 if (!bg) return;
                 let speed = [0.1, 0.3, 0.6][i];
@@ -248,11 +258,12 @@ window.addEventListener("load", () => {
                 ctx.drawImage(bg, x + canvas.width, 0, canvas.width, canvas.height);
             });
 
-            // Земля
+            // ПОЛ
             ctx.fillStyle = "#3d2516"; ctx.fillRect(0, GROUND_Y, canvas.width, 120);
             ctx.fillStyle = "#2ecc71"; ctx.fillRect(0, GROUND_Y, canvas.width, 15);
+            ctx.fillStyle = "#27ae60"; ctx.fillRect(0, GROUND_Y, canvas.width, 4);
 
-            // Отрисовка кубиков Анекдотов
+            // КУБИКИ АНЕКДОТОВ
             jokeBlocks.forEach(b => {
                 ctx.fillStyle = b.hit ? "#333" : "#f1c40f";
                 ctx.fillRect(b.x - lerpCameraX, b.y, 80, 80);
@@ -263,55 +274,47 @@ window.addEventListener("load", () => {
                 }
             });
 
-            // Отрисовка кубика CV
-            ctx.fillStyle = cvBlock.hit ? "#333" : "#3498db"; // Синий цвет для ПДФ
+            // КУБИК PDF
+            ctx.fillStyle = cvBlock.hit ? "#333" : "#3498db";
             ctx.fillRect(cvBlock.x - lerpCameraX, cvBlock.y, 80, 80);
             if(!cvBlock.hit) {
                 ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial";
                 ctx.fillText("PDF", cvBlock.x - lerpCameraX + 25, cvBlock.y + 45);
             }
 
-            // Отрисовка Финиша
+            // ФИНИШНАЯ ЧЕРТА
             ctx.fillStyle = "rgba(0, 255, 0, 0.3)";
             ctx.fillRect(FINISH_LINE_X - lerpCameraX, GROUND_Y - 300, 100, 300);
             ctx.fillStyle = "#fff"; ctx.font = "bold 20px Arial";
-            ctx.fillText("FINISH", FINISH_LINE_X - lerpCameraX + 15, GROUND_Y - 320);
+            ctx.fillText("FINISH", FINISH_LINE_X - lerpCameraX + 10, GROUND_Y - 320);
 
-            // Враги
+            // ВРАГИ LITTLE
             enemies.forEach(en => {
-                if (en.alive) {
-                    if (sprites.little) ctx.drawImage(sprites.little, en.x - lerpCameraX, en.y, en.w, en.h);
-                    else { ctx.fillStyle = "purple"; ctx.fillRect(en.x - lerpCameraX, en.y, en.w, en.h); }
-                }
+                if (en.alive && sprites.little) ctx.drawImage(sprites.little, en.x - lerpCameraX, en.y, en.w, en.h);
             });
 
-            // Босс
-            if (boss.active && boss.hp > 0) {
-                if (sprites.big) ctx.drawImage(sprites.big, boss.x - lerpCameraX, boss.y, boss.w, boss.h);
-                else { ctx.fillStyle = "darkred"; ctx.fillRect(boss.x - lerpCameraX, boss.y, boss.w, boss.h); }
+            // БОСС
+            if (boss.active && boss.hp > 0 && sprites.big) {
+                ctx.drawImage(sprites.big, boss.x - lerpCameraX, boss.y, boss.w, boss.h);
             }
 
-            // Пули
-            ctx.fillStyle = "yellow"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 20, 6));
-            ctx.fillStyle = "red"; fireballs.forEach(f => ctx.fillRect(f.x - lerpCameraX, f.y, 30, 30));
+            // ПУЛИ И ОГОНЬ
+            ctx.fillStyle = "yellow"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 18, 6));
+            ctx.fillStyle = "red"; fireballs.forEach(f => ctx.beginPath() || ctx.arc(f.x - lerpCameraX + 15, f.y + 15, 15, 0, Math.PI*2) || ctx.fill());
 
             // ИСПРАВЛЕННАЯ АНИМАЦИЯ ГЕРОЯ
             let img = sprites.idle;
-            if (player.vx !== 0) { 
-                // Бежит только если скорость не ноль
-                player.frame += 0.15;
+            if (player.vx !== 0) {
+                player.frame += 0.2;
                 let frameIdx = Math.floor(player.frame) % 4;
-                img = (sprites.run && sprites.run[frameIdx]) || sprites.idle;
+                img = (sprites.run && sprites.run[frameIdx]) ? sprites.run[frameIdx] : sprites.idle;
             } else {
-                // Строго возвращаем в начальное положение, когда стоит
-                player.frame = 0;
-                img = sprites.idle;
+                player.frame = 0; // Сбрасываем кадр при остановке
             }
 
             ctx.save();
             if (player.dir === -1) {
-                ctx.translate(player.x - lerpCameraX + player.w, player.y); 
-                ctx.scale(-1, 1);
+                ctx.translate(player.x - lerpCameraX + player.w, player.y); ctx.scale(-1, 1);
                 ctx.drawImage(img || new Image(), 0, 0, player.w, player.h);
             } else {
                 ctx.drawImage(img || new Image(), player.x - lerpCameraX, player.y, player.w, player.h);
