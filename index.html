@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Denis - Mario Style PM Game (Krk's Update)</title>
+    <title>Denis - PM Action Game (Fast Edition)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; touch-action: manipulation; }
         canvas { display: block; }
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; padding: 20px; box-sizing: border-box; }
         #lives { color: #ff0000; font-size: 18px; text-shadow: 2px 2px #000; }
+        #boss-bar { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); width: 300px; height: 15px; border: 3px solid #fff; display: none; background: #222; }
+        #boss-hp { width: 100%; height: 100%; background: #f00; transition: width 0.2s; }
         #joke-overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0, 0, 0, 0.8); color: #fff; display: none; 
@@ -20,7 +22,10 @@
 </head>
 <body>
 
-<div id="ui-layer"><div id="lives">ЖИЗНИ: ♥♥♥</div></div>
+<div id="ui-layer">
+    <div id="lives">ЖИЗНИ: ♥♥♥</div>
+    <div id="boss-bar"><div id="boss-hp"></div></div>
+</div>
 <div id="joke-overlay">АНЕКДОТ</div>
 <canvas id="game"></canvas>
 
@@ -31,7 +36,7 @@ window.addEventListener("load", () => {
     const jokeOverlay = document.getElementById("joke-overlay");
 
     const jokes = [
-        "ПРОДЖЕКТ-МЕНЕДЖЕР — ЭТО ЧЕЛОВЕК, КОТОРЫЙ СЧИТАЕТ, ЧТО 9 ЖЕНЩИН МОГУТ РОДИТЬ ЗА МЕСЯЦ!",
+        "ПРОДЖЕКТ-МЕНЕДЖЕР СЧИТАЕТ, ЧТО 9 ЖЕНЩИН РОДЯТ ЗА МЕСЯЦ!",
         "ЗАКАЗЧИК: 'ВЧЕРА'. ПМ: 'ВОТ ВАМ СЧЕТ И ГАЛЛЮЦИНАЦИЯ!'",
         "БЭКЛОГ — ЭТО КЛАДБИЩЕ ХОРОШИХ ИДЕЙ!"
     ];
@@ -49,37 +54,40 @@ window.addEventListener("load", () => {
     (async function() {
         const sprites = {
             idle: await load("idle.png"),
-            runSheet: await load("run_sheet.png") || await load("run_sheet.jpg"),
-            jumpSheet: await load("jump_sheet.png") || await load("jump_sheet.jpg"),
+            run: await load("run_sheet.png") || await load("run_sheet.jpg"),
+            jump: await load("jump_sheet.png") || await load("jump_sheet.jpg"),
             little: await load("Little.png"),
             big: await load("big.png")
         };
         const bgs = [await load("bg1.png"), await load("bg2.png"), await load("bg3.png")];
 
         const GROUND_Y = canvas.height - 120;
+        const FINISH_X = 4500; // Уровень короче
+
         let player = {
             x: 150, y: GROUND_Y - 140, w: 75, h: 130, 
             vx: 0, vy: 0, 
-            accel: 0.5,     
+            accel: 0.7,     // Быстрее разгон
             friction: 0.9,  
-            maxSpeed: 5.5,  
-            gravity: 0.7, 
-            jumpPower: -17,
+            maxSpeed: 7.5,  // Быстрее макс. скорость
+            gravity: 0.75, 
+            jumpPower: -18,
             grounded: false, jumps: 0, maxJumps: 2, frame: 0, dir: 1, lives: 3
         };
 
-        // Блоки с эффектом подпрыгивания (offsetY) и статусом spent
         let blocks = [
-            { x: 1000, y: GROUND_Y - 260, w: 70, h: 70, type: 'joke', offsetY: 0, spent: false },
-            { x: 1800, y: GROUND_Y - 360, w: 70, h: 70, type: 'joke', offsetY: 0, spent: false },
-            { x: 2800, y: GROUND_Y - 260, w: 70, h: 70, type: 'joke', offsetY: 0, spent: false },
-            { x: 4800, y: GROUND_Y - 260, w: 70, h: 70, type: 'cv', offsetY: 0, spent: false }
+            { x: 800, y: GROUND_Y - 260, w: 70, h: 70, type: 'joke', offsetY: 0, spent: false },
+            { x: 1500, y: GROUND_Y - 360, w: 70, h: 70, type: 'joke', offsetY: 0, spent: false },
+            { x: 2200, y: GROUND_Y - 260, w: 70, h: 70, type: 'joke', offsetY: 0, spent: false },
+            { x: 3000, y: GROUND_Y - 280, w: 70, h: 70, type: 'cv', offsetY: 0, spent: false }
         ];
 
         let enemies = [];
-        for(let i=0; i<5; i++) enemies.push({ x: 1300 + i*1100, y: GROUND_Y - 80, w: 80, h: 80, vx: -2.5, alive: true });
+        // Враги теперь отзеркалены (идут влево)
+        for(let i=0; i<4; i++) enemies.push({ x: 1200 + i*900, y: GROUND_Y - 80, w: 80, h: 80, vx: -3, alive: true, dir: -1 });
 
-        let bullets = []; // ВОЗВРАЩЕНА СТРЕЛЬБА
+        let boss = { x: 3800, y: GROUND_Y - 220, w: 220, h: 220, vx: -2.5, hp: 10, active: false, shotTimer: 0 };
+        let bullets = []; let fireballs = [];
         let lerpCameraX = 0;
         let keys = { a: false, d: false };
 
@@ -89,71 +97,75 @@ window.addEventListener("load", () => {
             if (e.code === "KeyW" && player.jumps < player.maxJumps) {
                 player.vy = player.jumpPower; player.jumps++; player.grounded = false;
             }
-            // ВОЗВРАЩЕН ПРОБЕЛ (Стрельба)
-            if (e.code === "Space") {
-                bullets.push({ 
-                    x: player.x + (player.dir === 1 ? player.w : 0) - (player.dir === -1 ? 15 : 0), 
-                    y: player.y + 60, 
-                    vx: player.dir * 12 // Скорость пули
-                });
-            }
+            if (e.code === "Space") bullets.push({ x: player.x + (player.dir === 1 ? player.w : 0), y: player.y + 65, vx: player.dir * 14 });
         });
         window.addEventListener("keyup", e => { if (e.code === "KeyA") keys.a = false; if (e.code === "KeyD") keys.d = false; });
 
         function update() {
-            // Физика Криса
             if (keys.a) { player.vx -= player.accel; player.dir = -1; }
             else if (keys.d) { player.vx += player.accel; player.dir = 1; }
             else { player.vx *= player.friction; }
             if (player.vx > player.maxSpeed) player.vx = player.maxSpeed;
             if (player.vx < -player.maxSpeed) player.vx = -player.maxSpeed;
             player.vy += player.gravity; player.x += player.vx; player.y += player.vy;
+
             if (player.y + player.h > GROUND_Y) { player.y = GROUND_Y - player.h; player.vy = 0; player.grounded = true; player.jumps = 0; } else { player.grounded = false; }
 
-            // ПУЛИ (update)
-            bullets.forEach((bull, i) => {
-                bull.x += bull.vx;
-                // Убивают врагов Little
-                enemies.forEach(en => { if (en.alive && bull.x > en.x && bull.x < en.x + en.w && bull.y > en.y && bull.y < en.y + en.h) { en.alive = false; bullets.splice(i, 1); } });
-                // Исчезают за камерой
-                if (bull.x < lerpCameraX || bull.x > lerpCameraX + canvas.width) { bullets.splice(i, 1); }
-            });
-
-            // ФИЗИКА БЛОКОВ (Марио-style с эффектом Spent)
+            // Блоки
             blocks.forEach(b => {
-                b.offsetY *= 0.8; // Плавный возврат блока
-                if (Math.abs(b.offsetY) < 1) b.offsetY = 0; // Полная остановка
-                
-                if (player.x + player.w > b.x && player.x < b.x + b.w && 
-                    player.y + player.h > b.y + b.offsetY && player.y < b.y + b.h + b.offsetY) {
-                    
-                    let overlapTop = (player.y + player.h) - (b.y + b.offsetY);
+                b.offsetY *= 0.8;
+                if (player.x + player.w > b.x && player.x < b.x + b.w && player.y + player.h > b.y + b.offsetY && player.y < b.y + b.h + b.offsetY) {
                     let overlapBot = (b.y + b.h + b.offsetY) - player.y;
+                    let overlapTop = (player.y + player.h) - (b.y + b.offsetY);
                     let overlapLeft = (player.x + player.w) - b.x;
                     let overlapRight = (b.x + b.w) - player.x;
                     let min = Math.min(overlapTop, overlapBot, overlapLeft, overlapRight);
 
-                    if (min === overlapTop && player.vy > 0) { player.y = b.y + b.offsetY - player.h; player.vy = 0; player.grounded = true; player.jumps = 0; }
-                    else if (min === overlapBot && player.vy < 0) { // СНИЗУ (Удар!)
+                    if (min === overlapBot && player.vy < 0) {
                         player.y = b.y + b.h + b.offsetY; player.vy = 3;
-                        if (!b.spent) { // Подпрыгивание и активация только если блок не потрачен
-                            b.offsetY = -15; 
-                            activateBlock(b);
-                        }
-                    } else if (min === overlapLeft) { player.x = b.x - player.w; player.vx = 0; }
+                        if (!b.spent) { b.offsetY = -15; b.spent = true; activateBlock(b); }
+                    } else if (min === overlapTop && player.vy > 0) { player.y = b.y + b.offsetY - player.h; player.vy = 0; player.grounded = true; }
+                    else if (min === overlapLeft) { player.x = b.x - player.w; player.vx = 0; }
                     else if (min === overlapRight) { player.x = b.x + b.w; player.vx = 0; }
                 }
             });
 
             function activateBlock(b) {
-                b.spent = true; // Блок становится неактивным
                 if (b.type === 'joke') {
                     jokeOverlay.innerText = jokes[Math.floor(Math.random() * jokes.length)];
                     jokeOverlay.style.display = "flex"; setTimeout(() => jokeOverlay.style.display = "none", 2500);
-                } else { window.open('resume.pdf', '_blank'); }
+                } else {
+                    // Прямое скачивание файла
+                    const a = document.createElement('a'); a.href = 'resume.pdf'; a.download = 'Denis_CV.pdf'; a.click();
+                }
             }
 
-            enemies.forEach(en => { if (!en.alive) return; en.x += en.vx; if (en.x < 500 || en.x > 6000) en.vx *= -1; if (player.x + player.w > en.x && player.x < en.x + en.w && player.y + player.h > en.y && player.y < en.y + en.h) { player.lives--; player.x -= 100; document.getElementById("lives").innerText = "ЖИЗНИ: " + "♥".repeat(Math.max(0, player.lives)); if(player.lives <= 0) location.reload(); } });
+            // Пули и Враги
+            bullets.forEach((bull, i) => {
+                bull.x += bull.vx;
+                enemies.forEach(en => { if (en.alive && bull.x > en.x && bull.x < en.x + en.w && bull.y > en.y && bull.y < en.y + en.h) { en.alive = false; bullets.splice(i, 1); } });
+                if (boss.active && bull.x > boss.x && bull.x < boss.x + boss.w && bull.y > boss.y && bull.y < boss.y + boss.h) { boss.hp--; bullets.splice(i, 1); document.getElementById("boss-hp").style.width = (boss.hp * 10) + "%"; }
+            });
+
+            enemies.forEach(en => {
+                if (!en.alive) return; en.x += en.vx; if (en.x < 300 || en.x > 4400) en.vx *= -1;
+                if (player.x + player.w > en.x && player.x < en.x + en.w && player.y + player.h > en.y && player.y < en.y + en.h) { player.lives--; player.x -= 100; document.getElementById("lives").innerText = "ЖИЗНИ: " + "♥".repeat(Math.max(0, player.lives)); if(player.lives <= 0) location.reload(); }
+            });
+
+            // Босс
+            if (player.x > 3200) { boss.active = true; document.getElementById("boss-bar").style.display = "block"; }
+            if (boss.active && boss.hp > 0) {
+                boss.x += boss.vx; if (boss.x < 3400 || boss.x > 4200) boss.vx *= -1;
+                boss.shotTimer++; if (boss.shotTimer > 90) { fireballs.push({ x: boss.x, y: boss.y + 100, vx: -8 }); boss.shotTimer = 0; }
+            }
+            if (boss.hp <= 0) { boss.active = false; document.getElementById("boss-bar").style.display = "none"; }
+
+            fireballs.forEach((f, i) => {
+                f.x += f.vx;
+                if (player.x + player.w > f.x && player.x < f.x + 30 && player.y + player.h > f.y && player.y < f.y + 30) { player.lives--; fireballs.splice(i, 1); document.getElementById("lives").innerText = "ЖИЗНИ: " + "♥".repeat(Math.max(0, player.lives)); if(player.lives <= 0) location.reload(); }
+            });
+
+            if (player.x > FINISH_X) window.location.href = "https://disvolo17.github.io/work/";
             lerpCameraX += (player.x - canvas.width / 2 - lerpCameraX) * 0.08;
         }
 
@@ -161,35 +173,29 @@ window.addEventListener("load", () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             bgs.forEach((bg, i) => { if (bg) { let x = -(lerpCameraX * (0.1 * (i+1))) % canvas.width; ctx.drawImage(bg, x, 0, canvas.width, canvas.height); ctx.drawImage(bg, x + canvas.width, 0, canvas.width, canvas.height); } });
             ctx.fillStyle = "#3d2516"; ctx.fillRect(0, GROUND_Y, canvas.width, 120);
-            
-            // ПУЛИ (draw)
-            ctx.fillStyle = "yellow"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 22, 5));
 
-            // Рисуем кубики (Марио-style с эффектом Spent)
+            // Блоки
             blocks.forEach(b => {
-                if (b.spent) {
-                    ctx.fillStyle = "#555"; // Серый цвет потраченного блока
-                } else {
-                    ctx.fillStyle = b.type === 'joke' ? "#f39c12" : "#3498db";
-                }
+                ctx.fillStyle = b.spent ? "#555" : (b.type === 'joke' ? "#f39c12" : "#3498db");
                 ctx.fillRect(b.x - lerpCameraX, b.y + b.offsetY, b.w, b.h);
-                
-                if (!b.spent) {
-                    // Отрисовка знака вопроса и рамки только для активных блоков
-                    ctx.strokeStyle = "#fff"; ctx.lineWidth = 3;
-                    ctx.strokeRect(b.x - lerpCameraX + 5, b.y + b.offsetY + 5, b.w - 10, b.h - 10);
-                    ctx.fillStyle = "#fff"; ctx.font = "bold 30px Arial";
-                    ctx.fillText("?", b.x - lerpCameraX + 22, b.y + b.offsetY + 45);
-                } else {
-                    // Отрисовка рамки потраченного блока
-                    ctx.strokeStyle = "#444"; ctx.lineWidth = 2;
-                    ctx.strokeRect(b.x - lerpCameraX, b.y + b.offsetY, b.w, b.h);
-                }
+                if (!b.spent) { ctx.fillStyle = "#fff"; ctx.font = "bold 25px Arial"; ctx.fillText("?", b.x - lerpCameraX + 22, b.y + b.offsetY + 45); }
             });
 
-            enemies.forEach(en => { if (en.alive && sprites.little) ctx.drawImage(sprites.little, en.x - lerpCameraX, en.y, en.w, en.h); });
+            // Враги
+            enemies.forEach(en => { 
+                if (!en.alive) return; 
+                ctx.save();
+                ctx.translate(en.x - lerpCameraX, en.y);
+                if (en.vx > 0) { ctx.scale(-1, 1); ctx.translate(-en.w, 0); } // Отзеркаливание врага по движению
+                if (sprites.little) ctx.drawImage(sprites.little, 0, 0, en.w, en.h);
+                ctx.restore();
+            });
 
-            // КРИС
+            if (boss.active && boss.hp > 0 && sprites.big) ctx.drawImage(sprites.big, boss.x - lerpCameraX, boss.y, boss.w, boss.h);
+            ctx.fillStyle = "yellow"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 20, 5));
+            ctx.fillStyle = "red"; fireballs.forEach(f => { ctx.beginPath(); ctx.arc(f.x - lerpCameraX + 15, f.y + 15, 15, 0, Math.PI*2); ctx.fill(); });
+
+            // Крис
             ctx.save();
             ctx.translate(player.x - lerpCameraX, player.y);
             if (player.dir === -1) { ctx.scale(-1, 1); ctx.translate(-player.w, 0); }
@@ -198,32 +204,14 @@ window.addEventListener("load", () => {
             if (state === 'idle' && sprites.idle) {
                 ctx.drawImage(sprites.idle, 0, 0, player.w, player.h);
             } else {
-                let sheet = state === 'run' ? sprites.runSheet : sprites.jumpSheet;
+                let sheet = state === 'run' ? sprites.run : sprites.jump;
                 let conf = state === 'run' ? {cols:4, rows:4, total:16, spd:0.25} : {cols:4, rows:2, total:8, spd:0.15};
                 if (sheet) {
                     player.frame += conf.spd;
                     let idx = Math.floor(player.frame) % conf.total;
-                    let fw = sheet.width / conf.cols; let fh = sheet.height / conf.rows;
-                    ctx.drawImage(sheet, (idx%conf.cols)*fw, Math.floor(idx/conf.cols)*fh, fw, fh, 0, 0, player.w, player.h);
+                    ctx.drawImage(sheet, (idx%conf.cols)*(sheet.width/conf.cols), Math.floor(idx/conf.cols)*(sheet.height/conf.rows), (sheet.width/conf.cols), (sheet.height/conf.rows), 0, 0, player.w, player.h);
                 }
             }
-
-            // --- МАКБУК В РУКЕ КРИСА ---
-            ctx.fillStyle = "silver"; // Цвет макбука
-            if (player.dir === 1) { // Если смотрит вправо
-                ctx.fillRect(45, 60, 25, 18); // Основание ноутбука
-                ctx.fillStyle = "rgba(0,0,0,0.8)"; // Экран
-                ctx.fillRect(48, 63, 19, 12);
-                ctx.fillStyle = "#ccc"; // Яблочко
-                ctx.fillRect(56, 68, 3, 3);
-            } else { // Если смотрит влево (зеркально)
-                ctx.fillRect(10, 60, 25, 18); 
-                ctx.fillStyle = "rgba(0,0,0,0.8)";
-                ctx.fillRect(13, 63, 19, 12);
-                ctx.fillStyle = "#ccc";
-                ctx.fillRect(21, 68, 3, 3);
-            }
-
             ctx.restore();
             requestAnimationFrame(draw);
         }
