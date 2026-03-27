@@ -260,4 +260,66 @@ window.addEventListener("load", () => {
             ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial"; ctx.fillText("PDF", cvBlock.x - lerpCameraX + 25, cvBlock.y + 45);
 
             // Финишная черта
-            ctx
+            ctx.fillStyle = "rgba(0, 255, 0, 0.3)"; ctx.fillRect(FINISH_LINE_X - lerpCameraX, GROUND_Y - 300, 100, 300);
+
+            // ВОЗВРАЩЕНЫ ВРАГИ (Little и Boss)
+            enemies.forEach(en => { if (en.alive && sprites.little) ctx.drawImage(sprites.little, en.x - lerpCameraX, en.y, en.w, en.h); });
+            if (boss.active && boss.hp > 0 && sprites.big) ctx.drawImage(sprites.big, boss.x - lerpCameraX, boss.y, boss.w, boss.h);
+
+            // Пули и Огонь
+            ctx.fillStyle = "yellow"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 18, 6));
+            ctx.fillStyle = "red"; fireballs.forEach(f => { ctx.beginPath(); ctx.arc(f.x - lerpCameraX + 15, f.y + 15, 15, 0, Math.PI*2); ctx.fill(); });
+
+            // --- КРИС-ГЕРОЙ: ПЛАВНЫЙ РЕНДЕР ИЗ СПРАЙТ-ЛИСТОВ (Исправлено) ---
+            let sheetImg, currentFrameCount, sheetW, sheetH, animSpeed;
+            let displayH = player.h;
+            let displayW = player.w + 10; 
+
+            ctx.save();
+            ctx.translate(player.x - lerpCameraX, player.y);
+
+            // Режим прорисовки (если идем влево - зеркалим)
+            if (player.dir === -1) { ctx.scale(-1, 1); ctx.translate(-displayW, 0); }
+
+            // Исправлена логика выбора листа: теперь бег работает
+            if (player.state === 'run') {
+                sheetImg = sprites.runSheet;
+                ({ frames: currentFrameCount, width: sheetW, height: sheetH, time: animSpeed } = animationConfig.run);
+                player.frame += animSpeed;
+                
+            } else if (player.state === 'jump') {
+                sheetImg = sprites.jumpSheet;
+                ({ frames: currentFrameCount, width: sheetW, height: sheetH, time: animSpeed } = animationConfig.jump);
+                player.frame += animSpeed;
+                // Прыжок проигрывается один раз до последнего кадра
+                if (player.frame >= currentFrameCount) player.frame = currentFrameCount - 1;
+
+            } else {
+                // СТОИТ (idle.png) - ЭФФЕКТ ДЫХАНИЯ
+                player.frame = 0;
+                player.breathTimer += 0.05;
+                displayH += Math.sin(player.breathTimer) * 2; 
+                ctx.translate(0, player.h - displayH); // Центрируем Крис
+                ctx.drawImage(sprites.idle, 0, 0, displayW, displayH);
+            }
+
+            // Рисуем кадр из спрайт-листа (Бег или Прыжок)
+            if (sheetImg) {
+                let currentFrameIdx = Math.floor(player.frame) % currentFrameCount;
+                ctx.drawImage(
+                    sheetImg, 
+                    currentFrameIdx * sheetW, 0, sheetW, sheetH, // Вырезаем из листа
+                    0, 0, displayW, displayH // Рисуем в игру
+                );
+            }
+
+            ctx.restore();
+
+            requestAnimationFrame(draw);
+        }
+        setInterval(update, 1000/60); draw();
+    })();
+});
+</script>
+</body>
+</html>
