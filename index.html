@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Denis - PM Dubai Action Game</title>
+    <title>Denis - PM Dubai Action Game (Крис)</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Press Start 2P', cursive; touch-action: manipulation; }
@@ -12,12 +12,11 @@
         #lives { color: #ff0000; font-size: 20px; text-shadow: 2px 2px #000; }
         #boss-bar { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); width: 300px; height: 15px; border: 3px solid #fff; display: none; background: #222; }
         #boss-hp { width: 100%; height: 100%; background: #f00; transition: width 0.2s; }
-        
         #joke-overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background: rgba(0, 0, 0, 0.6); color: #00ff00; display: none; 
             align-items: center; justify-content: center; text-align: center; 
-            font-size: 22px; padding: 40px; z-index: 100; text-transform: uppercase; line-height: 1.6;
+            font-size: 24px; padding: 40px; z-index: 100; text-transform: uppercase; line-height: 1.6;
             text-shadow: 2px 2px 0 #000;
         }
     </style>
@@ -61,15 +60,11 @@ window.addEventListener("load", () => {
     }
 
     (async function() {
-        // ЗАГРУЗКА ТВОИХ ФАЙЛОВ
+        // --- ЗАГРУЗКА СПРАЙТ-ЛИСТОВ (Крис) ---
         const sprites = {
             idle: await load("idle.png"),
-            run: [
-                await load("run.png"), 
-                await load("run1.png"), 
-                await load("run2.png"), 
-                await load("run3.png")
-            ],
+            runSheet: await load("run_sheet.png"), // Лист из 12 кадров бега
+            jumpSheet: await load("jump_sheet.png"), // Лист прыжка
             little: await load("Little.png"),
             big: await load("big.png")
         };
@@ -78,11 +73,19 @@ window.addEventListener("load", () => {
         const GROUND_Y = canvas.height - 120;
         const FINISH_LINE_X = 6500;
 
+        // Физика настроена под Крис-спрайты
         let player = {
             x: 150, y: GROUND_Y - 130, w: 75, h: 130, 
-            vx: 0, vy: 0, accel: 0.8, friction: 0.85, maxSpeed: 7, gravity: 0.8, jumpPower: -17,
+            vx: 0, vy: 0, accel: 0.8, friction: 0.85, maxSpeed: 7, gravity: 0.8, jumpPower: -18,
             grounded: false, jumps: 0, maxJumps: 2, frame: 0, dir: 1, lives: 3,
-            breathTimer: 0 // Для эффекта дыхания
+            state: 'idle', // idle, run, jump, fall
+            breathTimer: 0
+        };
+
+        // НАСТРОЙКИ СПРАЙТ-ЛИСТОВ (frames - кол-во кадров, time - скорость анимации)
+        const animationConfig = {
+            run: { frames: 12, width: 85, height: 130, time: 0.2 }, // 12 супер-плавных кадров
+            jump: { frames: 8, width: 85, height: 130, time: 0.15 } // 8 фаз прыжка
         };
 
         let bullets = []; let fireballs = []; let enemies = [];
@@ -106,6 +109,7 @@ window.addEventListener("load", () => {
             if (e.code === "KeyD") keys.d = true;
             if (e.code === "KeyW" && player.jumps < player.maxJumps) {
                 player.vy = player.jumpPower; player.jumps++; player.grounded = false;
+                if (player.state !== 'jump') player.frame = 0; // Сброс кадра прыжка
             }
             if (e.code === "Space") {
                 bullets.push({ x: player.x + (player.dir === 1 ? player.w : 0), y: player.y + 60, vx: player.dir * 14 });
@@ -134,6 +138,17 @@ window.addEventListener("load", () => {
             if (player.y + player.h > GROUND_Y) {
                 player.y = GROUND_Y - player.h;
                 player.vy = 0; player.grounded = true; player.jumps = 0;
+            } else {
+                player.grounded = false;
+            }
+
+            // ОПРЕДЕЛЯЕМ СОСТОЯНИЕ (для выбора спрайт-листа)
+            if (!player.grounded) {
+                player.state = 'jump';
+            } else if (player.vx !== 0) {
+                player.state = 'run';
+            } else {
+                player.state = 'idle';
             }
 
             // Блоки
@@ -151,27 +166,19 @@ window.addEventListener("load", () => {
                 const link = document.createElement('a'); link.href = 'resume.pdf'; link.download = 'Denis_CV.pdf'; link.click();
             }
 
-            // Враги
+            // Враги, Пули
+            bullets.forEach((bull, i) => {
+                bull.x += bull.vx;
+                enemies.forEach(en => { if (en.alive && bull.x > en.x && bull.x < en.x + en.w && bull.y > en.y && bull.y < en.y + en.h) { en.alive = false; bullets.splice(i, 1); } });
+            });
             enemies.forEach(en => {
-                if (!en.alive) return;
-                en.x += en.vx;
-                if (en.x < 100 || en.x > 6000) en.vx *= -1;
-                if (player.x + player.w > en.x && player.x < en.x + en.w && player.y + player.h > en.y && player.y < en.y + en.h) {
-                    player.lives--; player.x -= 200;
-                    document.getElementById("lives").innerText = "ЖИЗНИ: " + "♥".repeat(Math.max(0, player.lives));
-                    if(player.lives <= 0) location.reload();
-                }
+                if (!en.alive) return; en.x += en.vx; if (en.x < 100 || en.x > 6000) en.vx *= -1;
+                if (player.x + player.w > en.x && player.x < en.x + en.w && player.y + player.h > en.y && player.y < en.y + en.h) { player.lives--; player.x -= 150; document.getElementById("lives").innerText = "ЖИЗНИ: " + "♥".repeat(Math.max(0, player.lives)); if(player.lives <= 0) location.reload(); }
             });
 
-            // Босс
+            // Босс, Финиш
             if (player.x > 5000) { boss.active = true; document.getElementById("boss-bar").style.display = "block"; }
-            if (boss.active && boss.hp > 0) {
-                boss.x += boss.vx; if (boss.x < 5200 || boss.x > 6000) boss.vx *= -1;
-                boss.shotTimer++;
-                if (boss.shotTimer > 90) { fireballs.push({ x: boss.x, y: boss.y + 100, vx: -8 }); boss.shotTimer = 0; }
-            }
-
-            // Финиш
+            if (boss.active && boss.hp > 0) { boss.x += boss.vx; if (boss.x < 5200 || boss.x > 6000) boss.vx *= -1; boss.shotTimer++; if (boss.shotTimer > 90) { fireballs.push({ x: boss.x, y: boss.y + 100, vx: -8 }); boss.shotTimer = 0; } }
             if (player.x > FINISH_LINE_X) window.location.href = "https://disvolo17.github.io/work/";
 
             lerpCameraX += (player.x - canvas.width / 2 - lerpCameraX) * 0.08;
@@ -179,57 +186,61 @@ window.addEventListener("load", () => {
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            bgs.forEach((bg, i) => {
-                if (!bg) return;
-                let x = -(lerpCameraX * [0.1, 0.3, 0.6][i]) % canvas.width;
-                ctx.drawImage(bg, x, 0, canvas.width, canvas.height);
-                ctx.drawImage(bg, x + canvas.width, 0, canvas.width, canvas.height);
-            });
-
-            ctx.fillStyle = "#3d2516"; ctx.fillRect(0, GROUND_Y, canvas.width, 120);
-            ctx.fillStyle = "#2ecc71"; ctx.fillRect(0, GROUND_Y, canvas.width, 15);
-
+            bgs.forEach((bg, i) => { if (!bg) return; let x = -(lerpCameraX * [0.1, 0.3, 0.6][i]) % canvas.width; ctx.drawImage(bg, x, 0, canvas.width, canvas.height); ctx.drawImage(bg, x + canvas.width, 0, canvas.width, canvas.height); });
+            ctx.fillStyle = "#3d2516"; ctx.fillRect(0, GROUND_Y, canvas.width, 120); ctx.fillStyle = "#2ecc71"; ctx.fillRect(0, GROUND_Y, canvas.width, 15);
             jokeBlocks.forEach(b => { ctx.fillStyle = b.hit ? "#333" : "#f1c40f"; ctx.fillRect(b.x - lerpCameraX, b.y, 80, 80); });
-            ctx.fillStyle = "#3498db"; ctx.fillRect(cvBlock.x - lerpCameraX, cvBlock.y, 80, 80);
-            ctx.fillStyle = "rgba(0, 255, 0, 0.3)"; ctx.fillRect(FINISH_LINE_X - lerpCameraX, GROUND_Y - 300, 100, 300);
-
+            ctx.fillStyle = "#3498db"; ctx.fillRect(cvBlock.x - lerpCameraX, cvBlock.y, 80, 80); ctx.fillStyle = "rgba(0, 255, 0, 0.3)"; ctx.fillRect(FINISH_LINE_X - lerpCameraX, GROUND_Y - 300, 100, 300);
             enemies.forEach(en => { if (en.alive && sprites.little) ctx.drawImage(sprites.little, en.x - lerpCameraX, en.y, en.w, en.h); });
             if (boss.active && boss.hp > 0 && sprites.big) ctx.drawImage(sprites.big, boss.x - lerpCameraX, boss.y, boss.w, boss.h);
-            ctx.fillStyle = "yellow"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 18, 6));
-            ctx.fillStyle = "red"; fireballs.forEach(f => { ctx.beginPath(); ctx.arc(f.x - lerpCameraX + 15, f.y + 15, 15, 0, Math.PI*2); ctx.fill(); });
+            ctx.fillStyle = "yellow"; bullets.forEach(b => ctx.fillRect(b.x - lerpCameraX, b.y, 18, 6)); ctx.fillStyle = "red"; fireballs.forEach(f => { ctx.beginPath(); ctx.arc(f.x - lerpCameraX + 15, f.y + 15, 15, 0, Math.PI*2); ctx.fill(); });
 
-            // ГЕРОЙ - ЛОГИКА АНИМАЦИИ
-            let img = sprites.idle;
+            // --- КРИС-ГЕРОЙ: ПЛАВНЫЙ РЕНДЕР ИЗ СПРАЙТ-ЛИСТОВ ---
+            let sheetImg, currentFrameCount, sheetW, sheetH, animSpeed;
             let displayH = player.h;
-
-            if (player.vx !== 0) {
-                // ИДЕТ БЕГ
-                player.frame += 0.18;
-                let idx = Math.floor(player.frame) % 4;
-                img = sprites.run[idx] || sprites.idle;
-            } else {
-                // СТОИТ - ЭФФЕКТ ДЫХАНИЯ
-                player.frame = 0;
-                img = sprites.idle;
-                player.breathTimer += 0.05;
-                displayH += Math.sin(player.breathTimer) * 2; // Легкое покачивание
-            }
+            let displayW = player.w + 10; // Спрайт Крис чуть шире (85px), чем хитбокс (75px)
 
             ctx.save();
-            if (player.dir === -1) {
-                ctx.translate(player.x - lerpCameraX + player.w, player.y + (player.h - displayH));
-                ctx.scale(-1, 1);
-                ctx.drawImage(img, 0, 0, player.w, displayH);
+            ctx.translate(player.x - lerpCameraX, player.y);
+
+            // Режим прорисовки (если идем влево - зеркалим, если прыгаем - сдвиг по оси)
+            if (player.dir === -1) { ctx.scale(-1, 1); ctx.translate(-displayW, 0); }
+
+            if (player.state === 'run') {
+                sheetImg = sprites.runSheet;
+                ({ frames: currentFrameCount, width: sheetW, height: sheetH, time: animSpeed } = animationConfig.run);
+                player.frame += animSpeed;
+                
+            } else if (player.state === 'jump') {
+                sheetImg = sprites.jumpSheet;
+                ({ frames: currentFrameCount, width: sheetW, height: sheetH, time: animSpeed } = animationConfig.jump);
+                player.frame += animSpeed;
+                // Прыжок проигрывается один раз до последнего кадра
+                if (player.frame >= currentFrameCount) player.frame = currentFrameCount - 1;
+
             } else {
-                ctx.drawImage(img, player.x - lerpCameraX, player.y + (player.h - displayH), player.w, displayH);
+                // СТОИТ (idle.png) - ЭФФЕКТ ДЫХАНИЯ
+                player.frame = 0;
+                player.breathTimer += 0.05;
+                displayH += Math.sin(player.breathTimer) * 2; 
+                ctx.translate(0, player.h - displayH); // Центрируем Крис
+                ctx.drawImage(sprites.idle, 0, 0, displayW, displayH);
             }
+
+            // Рисуем кадр из спрайт-листа (Бег или Прыжок)
+            if (sheetImg) {
+                let currentFrameIdx = Math.floor(player.frame) % currentFrameCount;
+                ctx.drawImage(
+                    sheetImg, 
+                    currentFrameIdx * sheetW, 0, sheetW, sheetH, // Вырезаем из листа
+                    0, 0, displayW, displayH // Рисуем в игру
+                );
+            }
+
             ctx.restore();
 
             requestAnimationFrame(draw);
         }
-        setInterval(update, 1000/60);
-        draw();
+        setInterval(update, 1000/60); draw();
     })();
 });
 </script>
